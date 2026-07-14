@@ -1,0 +1,37 @@
+version: 2
+
+seeds:
+  - name: taxi_zone_lookup
+    description: "NYC TLC taxi zone lookup: maps location_id (1-265) to its borough, zone name, and service zone. Source of geographic names for dim_location."
+    config:
+      column_types:
+        location_id: INT64
+        borough: STRING
+        zone: STRING
+        service_zone: STRING
+    columns:
+      - name: location_id
+        description: "TLC taxi zone id (1-265)."
+        tests: [not_null, unique]
+
+  - name: payment_type_lookup
+    description: "Official NYC TLC payment_type code dictionary (1=Credit card, 2=Cash, ...)."
+    config:
+      column_types:
+        payment_type: INT64
+        payment_desc: STRING
+    columns:
+      - name: payment_type
+        description: "Payment type code."
+        tests: [not_null, unique]
+
+  - name: ratecode_lookup
+    description: "Official NYC TLC RatecodeID dictionary (1=Standard rate, 2=JFK, ...)."
+    config:
+      column_types:
+        ratecode_id: INT64
+        ratecode_desc: STRING
+    columns:
+      - name: ratecode_id
+        description: "Rate code id."
+        tests: [not_null, unique]
