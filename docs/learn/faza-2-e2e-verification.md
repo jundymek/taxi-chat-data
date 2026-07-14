@@ -110,3 +110,23 @@ dla `pickup_date = '2023-01-15'` zwróciła realne wiersze z prawdziwymi
 nazwami dzielnic i metod płatności (Manhattan/Credit card: 67 094 przejazdów,
 1 531 192.10 przychodu; Queens/Credit card: 7 025 przejazdów, 532 279.41
 przychodu) — model gwiazdy rozwiązuje się poprawnie end-to-end.
+
+## Nota governance: dlaczego nie ma testów `accepted_values`
+
+Projektowy spec (§7) wymieniał `accepted_values` na `payment_type` /
+`ratecode_id` jako jeden z testów governance. Świadomie ich NIE dodaliśmy,
+bo w tej hurtowni ich rolę pełnią mocniejsze testy `relationships`:
+
+- `payment_type` — test `relationships` z `fct_trips` do `dim_payment`
+  gwarantuje, że każda wartość kodu płatności istnieje w słowniku wymiaru
+  (dziś kody 0–6). To ściślejsze niż statyczna lista `accepted_values`,
+  bo dziedzina jest utrzymywana w jednym miejscu (seed → wymiar), a nie
+  zduplikowana w YAML-u testu. Osobny `accepted_values` byłby redundantny.
+- `ratecode_id` — świadomie NIE testujemy referencyjnie (patrz
+  `faza-2-fact.md`): surowe dane niosą kody spoza słownika (np. RatecodeID
+  99 = Null/unknown w oficjalnym słowniku TLC), które celowo zachowujemy.
+  `accepted_values` ograniczony do 1–6 wywaliłby build na legalnie
+  „brudnych" danych — dlatego byłby sprzeczny z decyzją projektową.
+
+Wniosek: pokrycie governance jest zachowane (25 testów danych zielonych),
+a odejście od litery specu jest świadome i udokumentowane tutaj.
