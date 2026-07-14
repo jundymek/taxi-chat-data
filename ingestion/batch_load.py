@@ -1,5 +1,6 @@
 import os
 
+from google.api_core.exceptions import Conflict
 from google.cloud import bigquery, storage
 
 from ingestion.config import Config
@@ -12,10 +13,16 @@ def blob_name_for(local_path: str) -> str:
 
 def ensure_bucket(cfg: Config) -> None:
     client = storage.Client(project=cfg.project_id)
-    if client.lookup_bucket(cfg.bucket) is None:
+    if client.lookup_bucket(cfg.bucket) is not None:
+        print(f"[gcs] bucket {cfg.bucket} already exists")
+        return
+    try:
         client.create_bucket(cfg.bucket, location=cfg.location)
         print(f"[gcs] created bucket {cfg.bucket}")
-    else:
+    except Conflict:
+        # Another run (or a race between lookup and create) already made it;
+        # treat that as success so the step stays idempotent, mirroring
+        # ensure_dataset's exists_ok=True.
         print(f"[gcs] bucket {cfg.bucket} already exists")
 
 
