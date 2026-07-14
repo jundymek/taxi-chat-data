@@ -4,8 +4,12 @@ __pycache__/
 .env
 .env.local
 # GCP credentials — NEVER in repo
+# We use Application Default Credentials (ADC), not key files, but block any
+# service-account key that might be downloaded so it can never be committed.
 gcp_key.json
 *-key.json
+*-sa.json
+*service-account*.json
 credentials.json
 # Data (we don't version Parquet files)
 data/
