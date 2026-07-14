@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: dim_location
+    description: "Location dimension: TLC taxi zones enriched with borough, zone name, and service zone. Referenced by fct_trips pickup/dropoff location ids."
+    columns:
+      - name: location_id
+        description: "TLC taxi zone id (primary key)."
+        tests: [not_null, unique]
+      - name: borough
+        description: "NYC borough the zone belongs to."
+
+  - name: dim_payment
+    description: "Payment dimension: payment_type code with its human-readable description."
+    columns:
+      - name: payment_type
+        description: "Payment type code (primary key)."
+        tests: [not_null, unique]
+      - name: payment_desc
+        description: "Human-readable payment method (e.g. Credit card, Cash)."
+
+  - name: dim_ratecode
+    description: "Rate code dimension: RatecodeID with its human-readable description."
+    columns:
+      - name: ratecode_id
+        description: "Rate code id (primary key)."
+        tests: [not_null, unique]
+      - name: ratecode_desc
+        description: "Human-readable rate code (e.g. Standard rate, JFK)."
+
+  - name: dim_datetime
+    description: "Date dimension at day grain, built from the pickup dates present in the data. Referenced by fct_trips.pickup_date."
+    columns:
+      - name: date_key
+        description: "Calendar date (primary key); matches fct_trips.pickup_date."
+        tests: [not_null, unique]
+      - name: is_weekend
+        description: "True for Saturday/Sunday."
