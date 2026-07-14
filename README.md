@@ -5,7 +5,7 @@ Full design: `docs/DESIGN.md`. Current phase plan: `docs/superpowers/plans/`.
 
 ## Status
 - [x] Faza 0: setup
-- [ ] Faza 1: batch ingestion (Parquet → GCS → BigQuery raw)
+- [x] Faza 1: batch ingestion (Parquet → GCS → BigQuery raw)
 - [ ] Faza 2: data warehouse (dbt, star schema)
 - [ ] Faza 3: GenAI (RAG + NL2SQL + guardrails)
 - [ ] Faza 4: streaming (Pub/Sub)
