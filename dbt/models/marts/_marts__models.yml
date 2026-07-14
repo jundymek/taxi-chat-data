@@ -36,3 +36,31 @@ models:
         tests: [not_null, unique]
       - name: is_weekend
         description: "True for Saturday/Sunday."
+
+  - name: fct_trips
+    description: "Trip fact table at one-row-per-trip grain. Partitioned by pickup_date and clustered by pickup_location_id for scan efficiency. Measures: fare, tip, tolls, total, distance, duration, passenger count."
+    columns:
+      - name: trip_key
+        description: "Deterministic surrogate key from staging (primary key)."
+        tests: [not_null, unique]
+      - name: pickup_date
+        description: "Partition key; joins dim_datetime.date_key."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_datetime')
+              field: date_key
+      - name: pickup_location_id
+        description: "Cluster key; joins dim_location.location_id."
+        tests:
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      - name: payment_type
+        description: "Joins dim_payment.payment_type."
+        tests:
+          - relationships:
+              to: ref('dim_payment')
+              field: payment_type
+      - name: ratecode_id
+        description: "Joins dim_ratecode.ratecode_id."
