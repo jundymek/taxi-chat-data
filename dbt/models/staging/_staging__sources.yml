@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: raw
+    database: taxi-chat-data
+    schema: raw
+    tables:
+      - name: trips
+        description: "Raw NYC Taxi trips loaded from Parquet in Faza 1 (untransformed)."
