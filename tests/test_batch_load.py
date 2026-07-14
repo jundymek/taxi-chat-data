@@ -1,5 +1,4 @@
 import pytest
-from ingestion.config import Config
 from ingestion.batch_load import blob_name_for
 
 

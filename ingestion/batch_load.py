@@ -58,9 +58,11 @@ def load_gcs_to_bq(cfg: Config, gcs_uri: str) -> int:
     )
     load_job = client.load_table_from_uri(gcs_uri, table_id, job_config=job_config)
     load_job.result()  # wait for completion
-    table = client.get_table(table_id)
-    print(f"[bq] loaded {table.num_rows} rows into {table_id}")
-    return table.num_rows
+    # Use the job's own authoritative counter rather than table metadata
+    # (num_rows can lag right after a load).
+    rows = load_job.output_rows
+    print(f"[bq] loaded {rows} rows into {table_id}")
+    return rows
 
 
 def run_batch(cfg: Config, local_path: str) -> int:
