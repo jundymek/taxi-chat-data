@@ -15,7 +15,7 @@ seeds:
         tests: [not_null, unique]
 
   - name: payment_type_lookup
-    description: "Official NYC TLC payment_type code dictionary (1=Credit card, 2=Cash, ...)."
+    description: "Official NYC TLC payment_type code dictionary (0=Flex fare trip, 1=Credit card, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided trip). Source: NYC TLC yellow trip records data dictionary."
     config:
       column_types:
         payment_type: INT64
