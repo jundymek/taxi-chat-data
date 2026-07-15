@@ -24,7 +24,7 @@ def _reject(sql: str, reason: str, estimated_bytes: int | None = None) -> Valida
 def validate(sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None) -> ValidationResult:
     try:
         statements = sqlglot.parse(sql, read="bigquery")
-    except sqlglot.errors.ParseError as exc:
+    except sqlglot.errors.SqlglotError as exc:  # ParseError, TokenError, ...
         return _reject(sql, f"Nie udało się sparsować SQL: {exc}")
 
     statements = [s for s in statements if s is not None]

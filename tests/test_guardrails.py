@@ -29,6 +29,14 @@ def test_rejects_unparseable_sql():
     assert result.reason is not None
 
 
+def test_rejects_sql_that_fails_tokenization():
+    """Unterminated string literals raise TokenError (not ParseError) in
+    sqlglot — still bad SQL, still a rejection, never an exception."""
+    result = validate("SELECT 'unterminated FROM `taxi-chat-data.marts.fct_trips`", bq_client=BQ())
+    assert not result.ok
+    assert result.reason is not None
+
+
 def test_rejects_non_select_statements():
     for sql in [
         "DELETE FROM `taxi-chat-data.marts.fct_trips` WHERE true",
