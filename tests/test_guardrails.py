@@ -57,6 +57,20 @@ def test_rejects_unqualified_tables():
     assert not result.ok
 
 
+def test_rejects_tables_missing_explicit_project():
+    """`marts.fct_trips` without a project would resolve against whatever
+    default project the client is configured with — require full
+    qualification so the query is pinned to taxi-chat-data."""
+    result = validate("SELECT * FROM marts.fct_trips LIMIT 5", bq_client=BQ())
+    assert not result.ok
+    assert result.reason is not None
+
+
+def test_rejects_tables_from_foreign_project():
+    result = validate("SELECT * FROM `other-project.marts.fct_trips` LIMIT 5", bq_client=BQ())
+    assert not result.ok
+
+
 def test_accepts_allowlisted_table_and_keeps_existing_limit():
     sql = "SELECT trip_key FROM `taxi-chat-data.marts.fct_trips` LIMIT 7"
     result = validate(sql, bq_client=BQ())

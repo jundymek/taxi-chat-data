@@ -39,8 +39,14 @@ def validate(sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None
     for table in statement.find_all(exp.Table):
         if table.name in cte_names and not table.db:
             continue  # reference to a CTE, not a real table
-        if table.catalog and table.catalog != config.BQ_PROJECT:
-            return _reject(sql, f"Tabela spoza projektu: {table.sql(dialect='bigquery')}.")
+        if table.catalog != config.BQ_PROJECT:
+            # Missing project would silently resolve against the client's
+            # default — require `project.dataset.table`, always.
+            return _reject(
+                sql,
+                f"Tabela {table.sql(dialect='bigquery')} musi być w pełni kwalifikowana "
+                f"jako `{config.BQ_PROJECT}.<dataset>.<tabela>`.",
+            )
         if table.db not in config.ALLOWED_DATASETS:
             shown = f"{table.db}.{table.name}" if table.db else table.name
             return _reject(
