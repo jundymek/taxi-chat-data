@@ -90,6 +90,56 @@ def test_validation_failure_retries_with_feedback_then_succeeds():
     assert any("Brak LIMIT" in p for p in llm.prompts)  # feedback reached the model
 
 
+def test_default_validate_uses_injected_bq_client():
+    """With validate_fn omitted, the guardrail dry-run must run on the SAME
+    injected BigQuery client as execution (not a fresh internal one)."""
+
+    class DryRunAwareBQClient(FakeBQClient):
+        def __init__(self):
+            super().__init__()
+            self.dry_runs = []
+
+        def query(self, sql, job_config=None):
+            if getattr(job_config, "dry_run", False):
+                self.dry_runs.append(sql)
+                return FakeQueryJob([])
+            return super().query(sql, job_config=job_config)
+
+    llm = FakeLLM([f"```sql\n{GOOD_SQL}\n```", "Odpowiedź."])
+    bq = DryRunAwareBQClient()
+    app = build_pipeline(llm=llm, retriever=FakeRetriever(), bq_client=bq)
+    state = app.invoke({"question": "Ile?"})
+    assert state["refused"] is False
+    assert bq.dry_runs, "guardrail dry-run must go through the injected client"
+    assert bq.executed == [GOOD_SQL]
+
+
+def test_default_retriever_survives_generation_only_llm(monkeypatch):
+    """Injecting an LLM without .embed() must not be handed to the default
+    retriever as embedder — the retriever falls back to its own."""
+    import genai.retriever
+
+    captured = {}
+
+    class RecordingRetriever:
+        def __init__(self, chroma_dir=None, embedder=None):
+            captured["embedder"] = embedder
+
+        def retrieve(self, question, k_schema=4, k_examples=3):
+            return CTX
+
+    monkeypatch.setattr(genai.retriever, "Retriever", RecordingRetriever)
+
+    class GenerationOnlyLLM:
+        def generate(self, prompt, system=None):
+            return f"```sql\n{GOOD_SQL}\n```"
+
+    app = build_pipeline(llm=GenerationOnlyLLM(), validate_fn=_validate_ok, bq_client=FakeBQClient())
+    state = app.invoke({"question": "Ile?"})
+    assert captured["embedder"] is None
+    assert state["refused"] is False
+
+
 def test_refuses_after_exhausting_attempts():
     def always_reject(sql, **kwargs):
         return ValidationResult(ok=False, sql=sql, reason="Tylko SELECT.", estimated_bytes=None)

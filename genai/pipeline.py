@@ -4,6 +4,7 @@ The graph earns its keep through the validate→generate_sql back-edge: on a
 guardrail rejection the model gets the Polish reason as feedback and tries
 again (config.MAX_SQL_ATTEMPTS total attempts).
 """
+from functools import partial
 from typing import TypedDict
 
 from langgraph.graph import END, StateGraph
@@ -40,13 +41,17 @@ def build_pipeline(llm=None, retriever=None, validate_fn=None, bq_client=None):
         from genai.llm_client import LLMClient
         llm = LLMClient()
     if retriever is None:
-        from genai.retriever import Retriever
-        retriever = Retriever(embedder=llm)
-    if validate_fn is None:
-        validate_fn = guardrails.validate
+        from genai import retriever as retriever_mod
+        # Share the LLM as embedder only when it can embed; a generation-only
+        # injected LLM must not break the default retriever.
+        embedder = llm if hasattr(llm, "embed") else None
+        retriever = retriever_mod.Retriever(embedder=embedder)
     if bq_client is None:
         from google.cloud import bigquery
         bq_client = bigquery.Client(project=config.BQ_PROJECT)
+    if validate_fn is None:
+        # Dry-run validation and execution must agree on project/auth/location.
+        validate_fn = partial(guardrails.validate, bq_client=bq_client)
 
     def retrieve(state: AskState) -> AskState:
         return {"context": retriever.retrieve(state["question"]), "attempts": 0,

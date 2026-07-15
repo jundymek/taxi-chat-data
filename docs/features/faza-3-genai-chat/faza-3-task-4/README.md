@@ -49,3 +49,12 @@ RAG retriever, SQL guardrails) into a working "chat with data" flow:
   contract, consistent with how wave-1 siblings shipped.
 - Unit tests never touch live GCP or Ollama; the integration file is written
   here but exercised only in Task 5, per the plan.
+- Codex review P2 (accepted, fixed): the plan's verbatim code handed an
+  injected generation-only LLM to the default retriever as embedder
+  (`AttributeError` on `.embed`); the LLM is now shared as embedder only when
+  it actually embeds.
+- Codex review P2 (accepted, fixed): an injected `bq_client` did not reach the
+  default `validate_fn`, so guardrail dry-runs ran on a fresh internal client
+  while execution used the injected one; the default is now
+  `partial(guardrails.validate, bq_client=bq_client)`. Both fixes have
+  regression tests in `tests/test_pipeline.py` (5 pipeline tests total).
