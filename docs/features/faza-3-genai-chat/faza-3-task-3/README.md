@@ -7,7 +7,8 @@
 BigQuery. Gates, in order:
 
 1. Parse with sqlglot (BigQuery dialect) — unparseable input rejected.
-2. Exactly one statement, and it must be a SELECT (CTEs/UNIONs allowed).
+2. Exactly one statement, and it must be a SELECT (CTEs/UNIONs allowed;
+   harmless outer parentheses unwrapped).
 3. Every referenced table must be fully qualified as
    `taxi-chat-data.<dataset>.<table>` (missing or foreign project rejected —
    never resolved against the client's default project) and live in an
@@ -29,11 +30,11 @@ model on retry. Exceptions are reserved for infrastructure failures.
 
 - `genai/guardrails.py` (NEW) — the validator; consumes only `genai.config`,
   `genai.types`, sqlglot, and an injectable BigQuery client.
-- `tests/test_guardrails.py` (NEW) — 15 unit tests with a `FakeBQClient`
-  stub; no live GCP touched (dry-run flag asserted on the stub). Five tests
+- `tests/test_guardrails.py` (NEW) — 16 unit tests with a `FakeBQClient`
+  stub; no live GCP touched (dry-run flag asserted on the stub). Six tests
   beyond the plan's 10 cover dry-run validation errors, missing/foreign
-  project qualification, tokenizer failures, and CTE-shadowed real tables
-  (all from Codex review findings).
+  project qualification, tokenizer failures, CTE-shadowed real tables, and
+  parenthesized SELECTs (all from Codex review findings).
 - `docs/learn/faza-3-guardrails.md` (NEW) — Polish learning note (why AST
   over regex, allowlist as least privilege, dry-run economics, verdict-not-
   exception pattern).
@@ -60,5 +61,8 @@ model on retry. Exceptions are reserved for infrastructure failures.
   `WITH trips AS (SELECT * FROM trips) SELECT * FROM trips` smuggle the real
   unqualified inner table through; table resolution is now scope-aware via
   `sqlglot.optimizer.scope.build_scope`.
-- Verified against installed sqlglot 30.12.0: 15/15 tests pass, full suite
-  30 passed / 1 integration-deselected.
+- Codex review run-5 P2 (accepted, fixed): a query wrapped in outer parens
+  parses as `exp.Subquery` and was falsely rejected; now unwrapped before
+  the SELECT-only gate.
+- Verified against installed sqlglot 30.12.0: 16/16 tests pass, full suite
+  31 passed / 1 integration-deselected.
