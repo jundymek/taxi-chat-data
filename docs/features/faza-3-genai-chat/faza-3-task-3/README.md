@@ -8,9 +8,11 @@ BigQuery. Gates, in order:
 
 1. Parse with sqlglot (BigQuery dialect) — unparseable input rejected.
 2. Exactly one statement, and it must be a SELECT (CTEs/UNIONs allowed).
-3. Every referenced table must be fully qualified and live in an allowlisted
-   dataset (`staging`, `marts`); tables from other GCP projects rejected;
-   CTE names correctly excluded from the table check.
+3. Every referenced table must be fully qualified as
+   `taxi-chat-data.<dataset>.<table>` (missing or foreign project rejected —
+   never resolved against the client's default project) and live in an
+   allowlisted dataset (`staging`, `marts`); CTE names correctly excluded
+   from the table check.
 4. `LIMIT` enforced — `config.DEFAULT_LIMIT` (100) appended when missing.
 5. BigQuery dry-run — query rejected when estimated scan exceeds `max_bytes`
    (default 1 GB); estimate is free (dry-run bills nothing). Dry-run
@@ -26,10 +28,10 @@ model on retry. Exceptions are reserved for infrastructure failures.
 
 - `genai/guardrails.py` (NEW) — the validator; consumes only `genai.config`,
   `genai.types`, sqlglot, and an injectable BigQuery client.
-- `tests/test_guardrails.py` (NEW) — 11 unit tests with a `FakeBQClient`
-  stub; no live GCP touched (dry-run flag asserted on the stub). The 11th
-  test (beyond the plan's 10) covers dry-run validation errors — added after
-  a Codex review P1 finding.
+- `tests/test_guardrails.py` (NEW) — 13 unit tests with a `FakeBQClient`
+  stub; no live GCP touched (dry-run flag asserted on the stub). Three tests
+  beyond the plan's 10 cover dry-run validation errors (Codex P1) and
+  missing/foreign project qualification (Codex P2).
 - `docs/learn/faza-3-guardrails.md` (NEW) — Polish learning note (why AST
   over regex, allowlist as least privilege, dry-run economics, verdict-not-
   exception pattern).
@@ -45,5 +47,9 @@ model on retry. Exceptions are reserved for infrastructure failures.
   semantic errors (`BadRequest`/`NotFound` on dry-run) escape as exceptions,
   violating the "never raises for bad SQL" contract; now caught and returned
   as a Polish rejection. Other exceptions still propagate (infrastructure).
-- Verified against installed sqlglot 30.12.0: 11/11 tests pass, full suite
-  26 passed / 1 integration-deselected.
+- Codex review P2 (accepted, fixed): the plan's code only rejected a *wrong*
+  project on a table reference, not a *missing* one, so `marts.fct_trips`
+  would resolve against the client's default project. Every real table now
+  requires the explicit `taxi-chat-data` project.
+- Verified against installed sqlglot 30.12.0: 13/13 tests pass, full suite
+  28 passed / 1 integration-deselected.
