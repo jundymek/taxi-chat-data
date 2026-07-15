@@ -33,6 +33,8 @@ def validate(sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None
         return _reject(sql, "Dozwolone jest dokładnie jedno zapytanie SQL.")
 
     statement = statements[0]
+    while isinstance(statement, (exp.Subquery, exp.Paren)):
+        statement = statement.this  # unwrap harmless outer parentheses
     if not isinstance(statement, (exp.Select, exp.Union)):
         return _reject(sql, "Dozwolone są wyłącznie zapytania SELECT (odczyt danych).")
 
