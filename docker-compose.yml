@@ -1,0 +1,14 @@
+services:
+  dbt:
+    build:
+      context: ./dbt
+      dockerfile: Dockerfile
+    working_dir: /usr/app/dbt
+    volumes:
+      # Project files (models, seeds, profiles) — live-editable from host.
+      - ./dbt:/usr/app/dbt
+      # ADC credentials, read-only, so the container authenticates as you.
+      - ~/.config/gcloud:/root/.config/gcloud:ro
+    environment:
+      # gcloud ADC default location inside the container.
+      - GOOGLE_CLOUD_PROJECT=taxi-chat-data

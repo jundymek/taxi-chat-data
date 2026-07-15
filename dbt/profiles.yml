@@ -1,0 +1,10 @@
+taxi_chat_data:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: taxi-chat-data
+      dataset: staging
+      location: US
+      threads: 4

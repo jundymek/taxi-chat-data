@@ -1,0 +1,23 @@
+name: taxi_chat_data
+version: "1.0.0"
+config-version: 2
+
+profile: taxi_chat_data
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+
+models:
+  taxi_chat_data:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  taxi_chat_data:
+    +schema: marts
+    +quote_columns: false

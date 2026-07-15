@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: stg_trips
+    description: "Cleaned, typed, deduplicated NYC Taxi trips from raw.trips. One row per trip, keyed by a deterministic surrogate trip_key. Bad rows (negative amounts, non-positive distance, impossible dates) are filtered out here."
+    columns:
+      - name: trip_key
+        description: "Deterministic surrogate key (hash of pickup/dropoff datetime, PU/DO location, fare, vendor). Same trip yields the same key across raw and (future) stream — basis for deduplication."
+        tests: [not_null, unique]
+      - name: pickup_datetime
+        description: "Trip start timestamp."
+        tests: [not_null]
+      - name: pickup_date
+        description: "Date of pickup (partition key of fct_trips)."
+        tests: [not_null]
+      - name: pickup_location_id
+        description: "TLC taxi zone id where the trip started."
+        tests: [not_null]
+      - name: dropoff_location_id
+        description: "TLC taxi zone id where the trip ended."
+      - name: payment_type
+        description: "Payment type code (joins dim_payment)."
+      - name: ratecode_id
+        description: "Rate code id (joins dim_ratecode)."
