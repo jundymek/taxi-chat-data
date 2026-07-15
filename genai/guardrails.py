@@ -12,6 +12,7 @@ retry feedback).
 """
 import sqlglot
 from sqlglot import exp
+from sqlglot.optimizer.scope import build_scope
 
 from genai import config
 from genai.types import ValidationResult
@@ -35,10 +36,17 @@ def validate(sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None
     if not isinstance(statement, (exp.Select, exp.Union)):
         return _reject(sql, "Dozwolone są wyłącznie zapytania SELECT (odczyt danych).")
 
-    cte_names = {cte.alias_or_name for cte in statement.find_all(exp.CTE)}
-    for table in statement.find_all(exp.Table):
-        if table.name in cte_names and not table.db:
-            continue  # reference to a CTE, not a real table
+    # Scope-aware resolution: build_scope maps each source to what it really
+    # is — CTE references resolve to their scope, real tables stay exp.Table.
+    # A name-only CTE exemption would let `WITH trips AS (SELECT * FROM trips)`
+    # smuggle the real (unqualified) inner table through.
+    real_tables = [
+        source
+        for scope in build_scope(statement).traverse()
+        for _alias, (_node, source) in scope.selected_sources.items()
+        if isinstance(source, exp.Table)
+    ]
+    for table in real_tables:
         if table.catalog != config.BQ_PROJECT:
             # Missing project would silently resolve against the client's
             # default — require `project.dataset.table`, always.

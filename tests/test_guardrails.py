@@ -102,6 +102,15 @@ def test_allows_cte_names_that_are_not_real_tables():
     assert result.ok
 
 
+def test_rejects_real_table_shadowed_by_cte_name():
+    """A CTE cannot see itself (no RECURSIVE) — the inner `FROM trips` is a
+    real, unqualified table and must NOT be exempted just because a CTE of
+    the same name exists."""
+    sql = "WITH trips AS (SELECT * FROM trips) SELECT * FROM trips"
+    result = validate(sql, bq_client=BQ())
+    assert not result.ok
+
+
 def test_rejects_queries_over_scan_budget():
     client = BQ(dry_run_bytes=5_000_000_000)
     result = validate(
