@@ -56,9 +56,15 @@ def validate(sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None
     if bq_client is None:
         from google.cloud import bigquery
         bq_client = bigquery.Client(project=config.BQ_PROJECT)
+    from google.api_core.exceptions import BadRequest, NotFound
     from google.cloud.bigquery import QueryJobConfig
 
-    job = bq_client.query(final_sql, job_config=QueryJobConfig(dry_run=True, use_query_cache=False))
+    try:
+        job = bq_client.query(final_sql, job_config=QueryJobConfig(dry_run=True, use_query_cache=False))
+    except (BadRequest, NotFound) as exc:
+        # Parseable but invalid for BigQuery (hallucinated column/table etc.)
+        # is a normal bad-SQL case, not an infrastructure failure.
+        return _reject(final_sql, f"BigQuery odrzucił zapytanie: {exc.message or exc}")
     estimated = job.total_bytes_processed
     if estimated is not None and estimated > max_bytes:
         return _reject(

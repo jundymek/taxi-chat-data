@@ -1,4 +1,5 @@
 import pytest
+from google.api_core.exceptions import BadRequest, NotFound
 
 from genai.guardrails import validate
 
@@ -88,6 +89,31 @@ def test_rejects_queries_over_scan_budget():
     )
     assert not result.ok
     assert result.estimated_bytes == 5_000_000_000
+
+
+def test_rejects_sql_that_fails_dry_run_validation():
+    """Parseable SQL can still be invalid for BigQuery (hallucinated column,
+    missing table) — dry-run raises BadRequest/NotFound and validate() must
+    return a rejection, not propagate the exception."""
+
+    class RejectingBQClient:
+        def __init__(self, error):
+            self.error = error
+
+        def query(self, sql, job_config=None):
+            assert job_config.dry_run is True
+            raise self.error
+
+    for error in [
+        BadRequest("Unrecognized name: no_such_column at [1:8]"),
+        NotFound("Not found: Table taxi-chat-data:marts.no_such_table"),
+    ]:
+        result = validate(
+            "SELECT no_such_column FROM `taxi-chat-data.marts.fct_trips` LIMIT 5",
+            bq_client=RejectingBQClient(error),
+        )
+        assert not result.ok
+        assert result.reason is not None
 
 
 def test_reports_estimated_bytes_on_success():
