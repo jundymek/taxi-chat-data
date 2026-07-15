@@ -1,0 +1,59 @@
+# Few-shot examples for NL2SQL: Polish question -> correct BigQuery SQL.
+# Curated by hand against the Faza 2 star schema. Indexed into Chroma by
+# genai/indexer.py; the retriever surfaces the most similar ones per question.
+examples:
+  - question: "Ile było wszystkich przejazdów?"
+    sql: "SELECT COUNT(*) AS trip_count FROM `taxi-chat-data.marts.fct_trips`"
+  - question: "Jaka była średnia cena przejazdu?"
+    sql: "SELECT ROUND(AVG(total_amount), 2) AS avg_total FROM `taxi-chat-data.marts.fct_trips`"
+  - question: "Jaki był średni napiwek przy płatności kartą?"
+    sql: |-
+      SELECT ROUND(AVG(f.tip_amount), 2) AS avg_tip
+      FROM `taxi-chat-data.marts.fct_trips` f
+      JOIN `taxi-chat-data.marts.dim_payment` p ON f.payment_type = p.payment_type
+      WHERE p.payment_desc = 'Credit card'
+  - question: "Z których dzielnic startowało najwięcej kursów?"
+    sql: |-
+      SELECT l.borough, COUNT(*) AS trips
+      FROM `taxi-chat-data.marts.fct_trips` f
+      JOIN `taxi-chat-data.marts.dim_location` l ON f.pickup_location_id = l.location_id
+      GROUP BY l.borough
+      ORDER BY trips DESC
+  - question: "Ile kursów było w weekendy, a ile w dni robocze?"
+    sql: |-
+      SELECT d.is_weekend, COUNT(*) AS trips
+      FROM `taxi-chat-data.marts.fct_trips` f
+      JOIN `taxi-chat-data.marts.dim_datetime` d ON f.pickup_date = d.date_key
+      GROUP BY d.is_weekend
+  - question: "Który dzień tygodnia miał najwięcej przejazdów?"
+    sql: |-
+      SELECT d.day_name, COUNT(*) AS trips
+      FROM `taxi-chat-data.marts.fct_trips` f
+      JOIN `taxi-chat-data.marts.dim_datetime` d ON f.pickup_date = d.date_key
+      GROUP BY d.day_name
+      ORDER BY trips DESC
+      LIMIT 1
+  - question: "Jaka jest średnia długość kursu w milach dla poszczególnych taryf?"
+    sql: |-
+      SELECT r.ratecode_desc, ROUND(AVG(f.trip_distance), 2) AS avg_distance
+      FROM `taxi-chat-data.marts.fct_trips` f
+      JOIN `taxi-chat-data.marts.dim_ratecode` r ON f.ratecode_id = r.ratecode_id
+      GROUP BY r.ratecode_desc
+      ORDER BY avg_distance DESC
+  - question: "Pokaż 10 najdroższych przejazdów."
+    sql: |-
+      SELECT trip_key, pickup_datetime, trip_distance, total_amount
+      FROM `taxi-chat-data.marts.fct_trips`
+      ORDER BY total_amount DESC
+      LIMIT 10
+  - question: "Jak zmieniała się dzienna liczba kursów w czasie?"
+    sql: |-
+      SELECT pickup_date, COUNT(*) AS trips
+      FROM `taxi-chat-data.marts.fct_trips`
+      GROUP BY pickup_date
+      ORDER BY pickup_date
+  - question: "Jaki procent kursów opłacono gotówką?"
+    sql: |-
+      SELECT ROUND(100 * COUNTIF(p.payment_desc = 'Cash') / COUNT(*), 1) AS cash_pct
+      FROM `taxi-chat-data.marts.fct_trips` f
+      JOIN `taxi-chat-data.marts.dim_payment` p ON f.payment_type = p.payment_type
