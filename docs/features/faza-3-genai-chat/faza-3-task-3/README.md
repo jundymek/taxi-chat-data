@@ -11,8 +11,9 @@ BigQuery. Gates, in order:
 3. Every referenced table must be fully qualified as
    `taxi-chat-data.<dataset>.<table>` (missing or foreign project rejected —
    never resolved against the client's default project) and live in an
-   allowlisted dataset (`staging`, `marts`); CTE names correctly excluded
-   from the table check.
+   allowlisted dataset (`staging`, `marts`); CTE references are excluded
+   scope-aware via `sqlglot.optimizer.scope.build_scope` (a real table
+   shadowed by a same-named CTE alias is still checked).
 4. `LIMIT` enforced — `config.DEFAULT_LIMIT` (100) appended when missing.
 5. BigQuery dry-run — query rejected when estimated scan exceeds `max_bytes`
    (default 1 GB); estimate is free (dry-run bills nothing). Dry-run
@@ -28,11 +29,11 @@ model on retry. Exceptions are reserved for infrastructure failures.
 
 - `genai/guardrails.py` (NEW) — the validator; consumes only `genai.config`,
   `genai.types`, sqlglot, and an injectable BigQuery client.
-- `tests/test_guardrails.py` (NEW) — 14 unit tests with a `FakeBQClient`
-  stub; no live GCP touched (dry-run flag asserted on the stub). Four tests
+- `tests/test_guardrails.py` (NEW) — 15 unit tests with a `FakeBQClient`
+  stub; no live GCP touched (dry-run flag asserted on the stub). Five tests
   beyond the plan's 10 cover dry-run validation errors, missing/foreign
-  project qualification, and tokenizer failures (all from Codex review
-  findings).
+  project qualification, tokenizer failures, and CTE-shadowed real tables
+  (all from Codex review findings).
 - `docs/learn/faza-3-guardrails.md` (NEW) — Polish learning note (why AST
   over regex, allowlist as least privilege, dry-run economics, verdict-not-
   exception pattern).
@@ -55,5 +56,9 @@ model on retry. Exceptions are reserved for infrastructure failures.
 - Codex review run-3 P1 (accepted, fixed): `sqlglot.parse` can raise
   `TokenError` (unterminated string literal), not only `ParseError`; the
   parse gate now catches the `SqlglotError` base class.
-- Verified against installed sqlglot 30.12.0: 14/14 tests pass, full suite
-  29 passed / 1 integration-deselected.
+- Codex review run-4 P1 (accepted, fixed): the name-only CTE exemption let
+  `WITH trips AS (SELECT * FROM trips) SELECT * FROM trips` smuggle the real
+  unqualified inner table through; table resolution is now scope-aware via
+  `sqlglot.optimizer.scope.build_scope`.
+- Verified against installed sqlglot 30.12.0: 15/15 tests pass, full suite
+  30 passed / 1 integration-deselected.
