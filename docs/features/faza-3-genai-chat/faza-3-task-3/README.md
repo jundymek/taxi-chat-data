@@ -30,11 +30,13 @@ model on retry. Exceptions are reserved for infrastructure failures.
 
 - `genai/guardrails.py` (NEW) — the validator; consumes only `genai.config`,
   `genai.types`, sqlglot, and an injectable BigQuery client.
-- `tests/test_guardrails.py` (NEW) — 16 unit tests with a `FakeBQClient`
-  stub; no live GCP touched (dry-run flag asserted on the stub). Six tests
-  beyond the plan's 10 cover dry-run validation errors, missing/foreign
-  project qualification, tokenizer failures, CTE-shadowed real tables, and
-  parenthesized SELECTs (all from Codex review findings).
+- `tests/test_guardrails.py` (NEW) — 19 unit tests with a `FakeBQClient`
+  stub; no live GCP touched (dry-run flag asserted on the stub). Nine tests
+  beyond the plan's 10: dry-run validation errors, missing/foreign project
+  qualification, tokenizer failures, CTE-shadowed real tables, parenthesized
+  SELECTs (from Codex review findings), plus regex-defeating attack shapes
+  (`SELECT 1; DROP ...`, comment-prefixed DELETE, blocked table nested in
+  subquery/JOIN) requested by the operator.
 - `docs/learn/faza-3-guardrails.md` (NEW) — Polish learning note (why AST
   over regex, allowlist as least privilege, dry-run economics, verdict-not-
   exception pattern).
@@ -64,5 +66,5 @@ model on retry. Exceptions are reserved for infrastructure failures.
 - Codex review run-5 P2 (accepted, fixed): a query wrapped in outer parens
   parses as `exp.Subquery` and was falsely rejected; now unwrapped before
   the SELECT-only gate.
-- Verified against installed sqlglot 30.12.0: 16/16 tests pass, full suite
-  31 passed / 1 integration-deselected.
+- Verified against installed sqlglot 30.12.0: 19/19 tests pass, full suite
+  34 passed / 1 integration-deselected.

@@ -54,6 +54,36 @@ def test_rejects_multiple_statements():
     assert not result.ok
 
 
+def test_rejects_select_smuggling_destructive_statement():
+    """`^SELECT`-style regex would pass this — the parser sees two statements."""
+    result = validate(
+        "SELECT 1; DROP TABLE `taxi-chat-data.marts.fct_trips`",
+        bq_client=BQ(),
+    )
+    assert not result.ok
+
+
+def test_rejects_destructive_statement_hidden_behind_comment():
+    """Leading comments/whitespace fool string-prefix checks, not the AST."""
+    result = validate(
+        "/* hej */ DELETE FROM `taxi-chat-data.marts.fct_trips` WHERE true",
+        bq_client=BQ(),
+    )
+    assert not result.ok
+
+
+def test_rejects_blocked_table_nested_in_subquery_and_join():
+    """Tables buried in subqueries/JOINs must still hit the allowlist."""
+    for sql in [
+        "SELECT * FROM (SELECT * FROM `taxi-chat-data.raw.trips`) sub LIMIT 5",
+        "SELECT f.trip_key FROM `taxi-chat-data.marts.fct_trips` f "
+        "JOIN `taxi-chat-data.raw.trips` r ON f.trip_key = r.trip_key LIMIT 5",
+    ]:
+        result = validate(sql, bq_client=BQ())
+        assert not result.ok, sql
+        assert "raw.trips" in result.reason
+
+
 def test_rejects_tables_outside_allowlist():
     result = validate("SELECT * FROM `taxi-chat-data.raw.trips` LIMIT 5", bq_client=BQ())
     assert not result.ok
