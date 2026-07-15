@@ -70,3 +70,18 @@ def test_embed_raises_llm_error_on_malformed_payload(monkeypatch):
     monkeypatch.setattr(requests, "post", lambda *a, **k: FakeResponse({"weird": True}))
     with pytest.raises(LLMError):
         LLMClient().embed(["a"])
+
+
+def test_generate_raises_llm_error_on_non_json_body(monkeypatch):
+    class NonJSONResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            raise requests.exceptions.JSONDecodeError("Expecting value", "<html>", 0)
+
+    monkeypatch.setattr(requests, "post", lambda *a, **k: NonJSONResponse())
+    with pytest.raises(LLMError):
+        LLMClient().generate("hi")

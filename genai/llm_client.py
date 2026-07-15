@@ -42,8 +42,8 @@ class LLMClient:
         try:
             response = requests.post(url, json=payload, timeout=self.timeout)
             response.raise_for_status()
+            return response.json()
         except requests.ConnectionError as exc:
             raise LLMError(_CONNECTION_HINT.format(url=self.base_url)) from exc
         except requests.RequestException as exc:
             raise LLMError(f"Ollama request to {path} failed: {exc}") from exc
-        return response.json()
