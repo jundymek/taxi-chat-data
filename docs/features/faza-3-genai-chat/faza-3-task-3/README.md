@@ -28,10 +28,11 @@ model on retry. Exceptions are reserved for infrastructure failures.
 
 - `genai/guardrails.py` (NEW) — the validator; consumes only `genai.config`,
   `genai.types`, sqlglot, and an injectable BigQuery client.
-- `tests/test_guardrails.py` (NEW) — 13 unit tests with a `FakeBQClient`
-  stub; no live GCP touched (dry-run flag asserted on the stub). Three tests
-  beyond the plan's 10 cover dry-run validation errors (Codex P1) and
-  missing/foreign project qualification (Codex P2).
+- `tests/test_guardrails.py` (NEW) — 14 unit tests with a `FakeBQClient`
+  stub; no live GCP touched (dry-run flag asserted on the stub). Four tests
+  beyond the plan's 10 cover dry-run validation errors, missing/foreign
+  project qualification, and tokenizer failures (all from Codex review
+  findings).
 - `docs/learn/faza-3-guardrails.md` (NEW) — Polish learning note (why AST
   over regex, allowlist as least privilege, dry-run economics, verdict-not-
   exception pattern).
@@ -51,5 +52,8 @@ model on retry. Exceptions are reserved for infrastructure failures.
   project on a table reference, not a *missing* one, so `marts.fct_trips`
   would resolve against the client's default project. Every real table now
   requires the explicit `taxi-chat-data` project.
-- Verified against installed sqlglot 30.12.0: 13/13 tests pass, full suite
-  28 passed / 1 integration-deselected.
+- Codex review run-3 P1 (accepted, fixed): `sqlglot.parse` can raise
+  `TokenError` (unterminated string literal), not only `ParseError`; the
+  parse gate now catches the `SqlglotError` base class.
+- Verified against installed sqlglot 30.12.0: 14/14 tests pass, full suite
+  29 passed / 1 integration-deselected.
