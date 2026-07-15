@@ -998,7 +998,7 @@ git commit -m "feat: SQL guardrails — sqlglot AST gates, dataset allowlist, LI
     → compiled LangGraph app; `pipeline.ask(question: str) -> dict` (final state)
   - CLI: `python -m genai.ask "pytanie"`
 
-- [ ] **Step 1: Write the failing nl2sql tests**
+- [x] **Step 1: Write the failing nl2sql tests**
 
 `tests/test_nl2sql.py`:
 ```python
@@ -1050,12 +1050,12 @@ def test_generate_sql_calls_llm_and_extracts():
     assert llm.system is not None and "BigQuery" in llm.system
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `.venv/bin/pytest tests/test_nl2sql.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'genai.nl2sql'`
 
-- [ ] **Step 3: Implement `genai/nl2sql.py`**
+- [x] **Step 3: Implement `genai/nl2sql.py`**
 
 ```python
 """Prompt assembly and SQL extraction for the NL2SQL step."""
@@ -1110,19 +1110,19 @@ def generate_sql(llm, question: str, context: SchemaContext, error_feedback: str
     return extract_sql(response)
 ```
 
-- [ ] **Step 4: Run nl2sql tests to verify they pass**
+- [x] **Step 4: Run nl2sql tests to verify they pass**
 
 Run: `.venv/bin/pytest tests/test_nl2sql.py -v`
 Expected: 6 PASS
 
-- [ ] **Step 5: Commit nl2sql**
+- [x] **Step 5: Commit nl2sql**
 
 ```bash
 git add genai/nl2sql.py tests/test_nl2sql.py
 git commit -m "feat: NL2SQL prompt assembly and SQL extraction"
 ```
 
-- [ ] **Step 6: Write the failing pipeline tests**
+- [x] **Step 6: Write the failing pipeline tests**
 
 `tests/test_pipeline.py`:
 ```python
@@ -1230,12 +1230,12 @@ def test_refuses_after_exhausting_attempts():
     assert state["rows"] == []
 ```
 
-- [ ] **Step 7: Run pipeline tests to verify they fail**
+- [x] **Step 7: Run pipeline tests to verify they fail**
 
 Run: `.venv/bin/pytest tests/test_pipeline.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'genai.pipeline'`
 
-- [ ] **Step 8: Implement `genai/pipeline.py`**
+- [x] **Step 8: Implement `genai/pipeline.py`**
 
 ```python
 """LangGraph pipeline: retrieve → generate_sql → validate ⇄ retry → execute → summarize.
@@ -1361,12 +1361,12 @@ def ask(question: str) -> dict:
     return app.invoke({"question": question})
 ```
 
-- [ ] **Step 9: Run pipeline tests to verify they pass**
+- [x] **Step 9: Run pipeline tests to verify they pass**
 
 Run: `.venv/bin/pytest tests/test_pipeline.py -v`
 Expected: 3 PASS
 
-- [ ] **Step 10: Implement `genai/ask.py` (CLI)**
+- [x] **Step 10: Implement `genai/ask.py` (CLI)**
 
 ```python
 """Single-shot CLI: python -m genai.ask "Ile było przejazdów?" """
@@ -1401,7 +1401,7 @@ if __name__ == "__main__":
 
 Manual check: `.venv/bin/python -m genai.ask --help` prints usage and exits 0.
 
-- [ ] **Step 11: Write the integration e2e test (marked, NOT run in CI)**
+- [x] **Step 11: Write the integration e2e test (marked, NOT run in CI)**
 
 `tests/test_e2e_integration.py`:
 ```python
@@ -1438,12 +1438,12 @@ Run: `.venv/bin/pytest tests/test_e2e_integration.py -v`
 Expected: `3 deselected` (integration excluded by default) — the live run
 happens in Task 5.
 
-- [ ] **Step 12: Run the full unit suite**
+- [x] **Step 12: Run the full unit suite**
 
 Run: `.venv/bin/pytest -v`
 Expected: all unit tests PASS (Tasks 0–4), integration deselected.
 
-- [ ] **Step 13: Write the Polish learning note**
+- [x] **Step 13: Write the Polish learning note**
 
 `docs/learn/faza-3-langgraph-nl2sql.md` — cover (in Polish, ~80–120 lines):
 czym jest LangGraph i czym różni się od LangChain (graf stanów z cyklami vs
@@ -1454,7 +1454,7 @@ feedback z poprzedniej próby); czemu wyciągamy SQL regexem z fence'a i
 zdejmujemy średnik; wzorzec dependency injection w build_pipeline (testy z
 fake'ami bez Ollamy/BQ).
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add genai/pipeline.py genai/ask.py tests/test_pipeline.py \

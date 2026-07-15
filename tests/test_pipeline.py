@@ -1,0 +1,102 @@
+from genai.pipeline import build_pipeline
+from genai.types import SchemaContext, ValidationResult
+
+CTX = SchemaContext(tables=["Table marts.fct_trips: trips"], examples=["QUESTION: q\nSQL: s"])
+GOOD_SQL = "SELECT COUNT(*) AS c FROM `taxi-chat-data.marts.fct_trips` LIMIT 100"
+
+
+class FakeRetriever:
+    def retrieve(self, question, k_schema=4, k_examples=3):
+        return CTX
+
+
+class FakeLLM:
+    """Returns queued generate() responses, then keeps repeating the last one."""
+
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.prompts = []
+
+    def generate(self, prompt, system=None):
+        self.prompts.append(prompt)
+        return self.responses.pop(0) if len(self.responses) > 1 else self.responses[0]
+
+
+class FakeRow:
+    def __init__(self, data):
+        self._data = data
+
+    def items(self):
+        return self._data.items()
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+
+class FakeQueryJob:
+    def __init__(self, rows):
+        self._rows = rows
+        self.total_bytes_processed = 512
+
+    def result(self):
+        return self._rows
+
+
+class FakeBQClient:
+    def __init__(self):
+        self.executed = []
+
+    def query(self, sql, job_config=None):
+        assert job_config.maximum_bytes_billed is not None
+        self.executed.append(sql)
+        return FakeQueryJob([FakeRow({"c": 3066766})])
+
+
+def _validate_ok(sql, **kwargs):
+    return ValidationResult(ok=True, sql=sql, reason=None, estimated_bytes=512)
+
+
+def test_happy_path_retrieve_generate_validate_execute_summarize():
+    llm = FakeLLM([f"```sql\n{GOOD_SQL}\n```", "W hurtowni są 3 066 766 przejazdy."])
+    bq = FakeBQClient()
+    app = build_pipeline(llm=llm, retriever=FakeRetriever(), validate_fn=_validate_ok, bq_client=bq)
+    state = app.invoke({"question": "Ile było przejazdów?"})
+    assert state["refused"] is False
+    assert state["rows"] == [{"c": 3066766}]
+    assert state["answer"] == "W hurtowni są 3 066 766 przejazdy."
+    assert bq.executed == [GOOD_SQL]
+
+
+def test_validation_failure_retries_with_feedback_then_succeeds():
+    calls = {"n": 0}
+
+    def flaky_validate(sql, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return ValidationResult(ok=False, sql=sql, reason="Brak LIMIT", estimated_bytes=None)
+        return ValidationResult(ok=True, sql=sql, reason=None, estimated_bytes=1)
+
+    llm = FakeLLM([f"```sql\n{GOOD_SQL}\n```", f"```sql\n{GOOD_SQL}\n```", "Odpowiedź."])
+    app = build_pipeline(llm=llm, retriever=FakeRetriever(), validate_fn=flaky_validate, bq_client=FakeBQClient())
+    state = app.invoke({"question": "Ile?"})
+    assert state["refused"] is False
+    assert calls["n"] == 2
+    assert any("Brak LIMIT" in p for p in llm.prompts)  # feedback reached the model
+
+
+def test_refuses_after_exhausting_attempts():
+    def always_reject(sql, **kwargs):
+        return ValidationResult(ok=False, sql=sql, reason="Tylko SELECT.", estimated_bytes=None)
+
+    llm = FakeLLM(["```sql\nDROP TABLE x\n```"])
+    app = build_pipeline(llm=llm, retriever=FakeRetriever(), validate_fn=always_reject, bq_client=FakeBQClient())
+    state = app.invoke({"question": "Usuń dane"})
+    assert state["refused"] is True
+    assert "Tylko SELECT." in state["answer"]
+    assert state["rows"] == []
