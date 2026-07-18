@@ -1,0 +1,51 @@
+# Local Airflow (LocalExecutor + Postgres metadata DB) for orchestrating the dbt
+# transform. Manually triggered — not a production scheduler. ADC is bind-mounted
+# read-only (the proven Faza 2 pattern) so dbt-bigquery authenticates as you.
+#
+#   docker compose -f docker-compose.airflow.yml up -d
+#   docker compose -f docker-compose.airflow.yml logs airflow | grep -i password
+#   docker compose -f docker-compose.airflow.yml exec airflow airflow dags trigger dbt_transform
+#   docker compose -f docker-compose.airflow.yml down
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+
+  airflow:
+    image: apache/airflow:2.10.4-python3.11
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      # ADC for dbt-bigquery (mounted read-only below).
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/gcloud/application_default_credentials.json
+      GOOGLE_CLOUD_PROJECT: taxi-chat-data
+      # Match the project's own dbt Dockerfile pin. (The DAG copies the mounted
+      # dbt project into a writable temp dir before running, so dbt deps/target/
+      # logs never need to write to the host-owned bind mount — portable to Linux.)
+      _PIP_ADDITIONAL_REQUIREMENTS: "dbt-bigquery>=1.8,<2.0"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./dbt:/opt/airflow/dbt
+      # ${HOME} (not ~): Compose always expands ${HOME} in a bind source, but a
+      # leading ~ is only expanded by some Compose versions — using ${HOME}
+      # avoids a host-dependent "credentials not found" failure.
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/opt/airflow/gcloud/application_default_credentials.json:ro
+    ports:
+      - "8080:8080"
+    command: standalone
+
+volumes:
+  airflow-db:
