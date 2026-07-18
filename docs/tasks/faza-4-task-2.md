@@ -64,12 +64,15 @@ Claude Opus 4.8 (1M context) — agent `bob`, autonomous mode.
   simplicity, documented in the learning note).
 - `row_ids = [trip_key, ...]` uses BigQuery insertId as the best-effort dedup
   for the producer's deliberate duplicates.
-- One deviation from the plan's verbatim code (codex P1 fix): also nack the
-  batch when `insert_rows_json` *raises* (transient RPC/auth/network), not only
-  when it returns a row-level error list — otherwise the popped batch was left
-  neither acked nor nacked and the exception could stop the consumer. Added a
-  5th regression test (`test_insert_exception_nacks_batch_and_does_not_propagate`),
-  so this task ships 5 tests vs AC #1's stated 4. See DECISIONS.md D5.
+- Two deviations from the plan's verbatim code, both from codex P1 findings:
+  (a) also nack the batch when `insert_rows_json` *raises* (transient
+  RPC/auth/network), not only when it returns a row-level error list —
+  otherwise the popped batch was left neither acked nor nacked and the
+  exception could stop the consumer; (b) a nacked batch fires an `on_retry`
+  hook that resets the CLI idle timer, so `--idle-timeout` cannot shut down the
+  consumer before Pub/Sub redelivers the batch it just nacked. Two regression
+  tests added, so this task ships 6 tests vs AC #1's stated 4. See DECISIONS.md
+  D5/D6.
 - Unit tests use fake message + fake BQ (no live GCP); live smoke + dedup
   verification is Task 3.
 - Did not touch `stream_common.py`, `stream_producer.py`, `requirements.txt`,

@@ -23,16 +23,27 @@ from ingestion.stream_common import load_stream_config, message_to_bq_row
 
 
 class BatchWriter:
-    def __init__(self, bq_client, table_id: str, batch_size: int = 500):
+    def __init__(self, bq_client, table_id: str, batch_size: int = 500,
+                 on_retry=None):
         self._bq = bq_client
         self._table_id = table_id
         self._batch_size = batch_size
+        # Called whenever a batch is nacked (redelivery pending). The CLI uses
+        # it to reset its idle timer so it does not shut down while it still
+        # has outstanding work coming back from Pub/Sub.
+        self._on_retry = on_retry
         self._lock = threading.Lock()
         self._rows: list[dict] = []
         self._messages: list = []
         self.seen = 0
         self.inserted = 0
         self.rejected = 0
+
+    def _nack_all(self, messages) -> None:
+        for message in messages:
+            message.nack()
+        if self._on_retry is not None:
+            self._on_retry()
 
     def add(self, message) -> None:
         with self._lock:
@@ -67,13 +78,11 @@ class BatchWriter:
             # auth, quota). Nack the whole batch and keep the consumer alive:
             # Pub/Sub redelivers, insertId (trip_key) de-dups what landed.
             print(f"[consumer] insert raised ({exc!r}) — nacking batch of {len(rows)}")
-            for message in messages:
-                message.nack()
+            self._nack_all(messages)
             return
         if errors:
             print(f"[consumer] insert errors ({len(errors)}) — nacking batch of {len(rows)}")
-            for message in messages:
-                message.nack()
+            self._nack_all(messages)
             return
         for message in messages:
             message.ack()
@@ -91,15 +100,22 @@ def main(argv=None) -> int:
 
     cfg = load_stream_config()
     table_id = f"{cfg.project_id}.{cfg.dataset_stream}.trips"
-    writer = BatchWriter(bigquery.Client(project=cfg.project_id), table_id, args.batch_size)
 
     subscriber = pubsub_v1.SubscriberClient()
     sub_path = subscriber.subscription_path(cfg.project_id, cfg.subscription)
     last_seen = time.monotonic()
 
-    def callback(message):
+    def note_activity():
         nonlocal last_seen
         last_seen = time.monotonic()
+
+    # A nacked batch means redelivery is pending — reset the idle timer so we
+    # do not shut down before Pub/Sub brings it back.
+    writer = BatchWriter(bigquery.Client(project=cfg.project_id), table_id,
+                         args.batch_size, on_retry=note_activity)
+
+    def callback(message):
+        note_activity()
         writer.add(message)
 
     flow = pubsub_v1.types.FlowControl(max_messages=1000)

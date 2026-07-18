@@ -118,6 +118,15 @@ CLI ma dwa parametry sterujące życiem procesu:
   (`monotonic() - last_seen > idle_timeout`), proces się wyłącza. Dzięki temu
   demo/replay kończy się samo, bez wiszenia w nieskończoność.
 
+Ważny szczegół: **nack też liczy się jako „aktywność"**. Gdy partię
+zanackowaliśmy (np. po błędzie insertu), redelivery *dopiero nadejdzie* — więc
+`BatchWriter` woła wtedy hook `on_retry`, który resetuje `last_seen`. Bez tego
+timeout bezczynności mógłby wystrzelić między nackiem a redelivery i zamknąć
+konsumenta, zanim dostałby z powrotem swoje własne wiadomości (utrata danych).
+Kompromis: przy *trwałej* awarii BigQuery konsument zapętla się
+(nack→redelivery→nack) zamiast wyjść — to widać w logach i jest lepsze niż ciche
+wyjście z niedostarczonymi danymi; Ctrl-C zawsze go zatrzyma.
+
 W `finally` zawsze robimy `future.cancel()` + `future.result()` (zatrzymanie
 streaming pull) i **ostatni** `flush()`, żeby nie zgubić resztek z bufora, a na
 końcu drukujemy `seen/inserted/rejected` — te liczniki czyta runbook w Task 3.

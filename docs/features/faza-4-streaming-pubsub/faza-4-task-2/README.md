@@ -36,8 +36,11 @@ trip messages from the Pub/Sub subscription and streams them into BigQuery
   precisely because insertId dedups the rows that already landed on redelivery.
 - **nack on a *raised* insert too, not only a returned error list** (codex P1).
   `insert_rows_json` can raise on transient RPC/auth/network failures; caught
-  and nacked so the consumer stays alive and keeps at-least-once. Covered by a
-  5th regression test beyond the plan's 4.
+  and nacked so the consumer stays alive and keeps at-least-once.
+- **a nacked batch resets the idle timer** (codex P1, round 2). `BatchWriter`
+  fires an `on_retry` hook on every nack; the CLI bumps `last_seen` so
+  `--idle-timeout` cannot shut the consumer down while a redelivery it just
+  requested is still in flight. Two regression tests added beyond the plan's 4.
 - **malformed → ack + `rejected`, no dead-letter topic.** Prevents a poison
   message from looping forever; a DLT is the production-correct choice and is
   intentionally deferred (see learning note §6). Visible via the `rejected`
@@ -48,9 +51,9 @@ trip messages from the Pub/Sub subscription and streams them into BigQuery
   are pinned to that exact `BatchWriter` API.
 
 ## Verification
-- `.venv/bin/pytest tests/test_stream_consumer.py -v` → **5 passed** (the 4
-  plan tests + 1 codex-driven regression test for a raised insert).
-- Full suite `.venv/bin/pytest` → **69 passed, 5 deselected** (integration
+- `.venv/bin/pytest tests/test_stream_consumer.py -v` → **6 passed** (the 4
+  plan tests + 2 codex-driven regression tests: raised insert, nack resets idle).
+- Full suite `.venv/bin/pytest` → **70 passed, 5 deselected** (integration
   tests deselected — no live GCP touched by unit tests, per phase constraint).
 - Live Pub/Sub→BigQuery smoke run + end-to-end dedup verification is Task 3
   (in the operator session, after this and the producer PR merge).

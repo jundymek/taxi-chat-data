@@ -88,6 +88,17 @@ def test_insert_exception_nacks_batch_and_does_not_propagate():
     assert bq.calls == 1
 
 
+def test_nack_fires_on_retry_hook_to_reset_idle_timer():
+    # A nacked batch has a redelivery pending — the CLI must not treat that as
+    # idleness, so BatchWriter calls on_retry whenever it nacks.
+    bq = FakeBQ(errors=[{"index": 0, "errors": [{"reason": "invalid"}]}])
+    bumps = []
+    writer = BatchWriter(bq, "p.stream.trips", batch_size=1,
+                         on_retry=lambda: bumps.append(1))
+    writer.add(FakeMessage(row_to_message(ROW)))
+    assert bumps == [1]
+
+
 def test_malformed_message_is_acked_and_counted_rejected():
     bq = FakeBQ()
     writer = BatchWriter(bq, "p.stream.trips", batch_size=1)
