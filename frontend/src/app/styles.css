@@ -48,6 +48,13 @@ body {
   background: var(--color-line);
   border-radius: 4px;
 }
+/* When the last station is the pulsing pending one, stop the line at that dot's
+   centre instead of running past it to the container floor. The pending row is
+   a single label line, so its dot centre sits ~0.75em from the row top; ending
+   the line there keeps it from poking out below the hollow dot. */
+.timeline:has(.station.pending:last-child)::before {
+  bottom: calc(1.5rem - 0.75em);
+}
 .station {
   position: relative;
   font-size: 0.95rem;
@@ -74,8 +81,11 @@ body {
   background: var(--color-err);
   border-color: var(--color-err);
 }
+/* Pending station: same size/weight as a completed dot, in a neutral grey so it
+   reads as "not done yet" without looking flimsy. Opaque fill covers the line
+   beneath it. */
 .station.pending::before {
-  background: #fff;
+  background: #bbb;
   border-color: #bbb;
 }
 .station .dots {
@@ -101,25 +111,26 @@ body {
   font-size: 0.78rem;
   color: var(--color-err);
 }
-/* Pulsing pending station: the dot breathes while the next stage runs.
-   Named `station-pulse` (not `pulse`) to avoid colliding with Tailwind's own
-   `@keyframes pulse`. */
-.station.pending::before {
-  animation: station-pulse 1.1s ease-in-out infinite;
+/* Pulsing pending station: the WHOLE row (dot + label) breathes while the next
+   stage runs. Named `station-pulse` (not `pulse`) to avoid colliding with
+   Tailwind's own `@keyframes pulse`. */
+.station.pending {
+  animation: station-pulse 1.2s ease-in-out infinite;
 }
 .station.pending .lbl {
   color: #888;
 }
 @keyframes station-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.8); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .station { animation: arrive 0.2s ease-out; }
+  /* Not the pending row — it owns the continuous station-pulse animation. */
+  .station:not(.pending) { animation: arrive 0.2s ease-out; }
   @keyframes arrive {
     from { opacity: 0; transform: translateY(4px); }
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .station.pending::before { animation: none; }
+  .station.pending { animation: none; }
 }

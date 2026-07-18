@@ -56,6 +56,13 @@ describe("cleanReason", () => {
     const reason = "Tabela raw.trips jest poza dozwolonymi zbiorami danych (marts, staging).";
     expect(cleanReason(reason)).toBe(reason);
   });
+
+  it("falls back to the wrapper alone when stripping leaves nothing", () => {
+    const raw = "BigQuery odrzucił zapytanie: Job ID: 065f810b-ba78-4c56";
+    const cleaned = cleanReason(raw);
+    expect(cleaned).toBe("BigQuery odrzucił zapytanie:");
+    expect(cleaned).not.toContain("Job ID");
+  });
 });
 
 describe("nextStageLabel", () => {

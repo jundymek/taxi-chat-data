@@ -44,13 +44,16 @@ export function cleanReason(reason: string): string {
   body = body.replace(/\s*(at \[\d+:\d+\])?\s*Location:.*$/i, "");
   body = body.replace(/\s*Job ID:.*$/i, "");
   const cleaned = body.trim();
-  return cleaned ? `${WRAPPER} ${cleaned}` : reason;
+  // If stripping left nothing, show the wrapper alone rather than re-exposing
+  // the raw URL/Job-ID noise this function exists to remove.
+  return cleaned ? `${WRAPPER} ${cleaned}` : WRAPPER;
 }
 
 /**
- * C1 "Linia M" stage timeline. Each station owns its own line segment and dot
- * (per-row geometry) so a wrapped rejection reason never drifts the line. While
- * running, a pulsing pending station shows the predicted next stage.
+ * C1 "Linia M" stage timeline. One continuous route line (`.timeline::before`)
+ * with the station dots centred on it; a wrapped rejection reason flows below
+ * its row without drifting the line. While running, a pulsing pending station
+ * shows the predicted next stage.
  * Presentational only — logic lives in the exported pure helpers above.
  */
 export function StageTimeline({ frames, running }: StageTimelineProps) {
