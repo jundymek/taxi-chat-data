@@ -34,9 +34,9 @@ Spec: `docs/superpowers/specs/2026-07-18-faza-6-eval-airflow-stream-merge-design
 6. THIS story updated before PR (Status: done, checkboxes, Dev Agent Record).
 
 ## Tasks / Subtasks
-- [x] Ensure `apache-airflow` importable for the structure test — provisioned an
-      isolated `.venv-airflow` (py3.11, airflow 2.10.4) instead of the shared
-      `.venv` (see Completion Notes for why).
+- [x] Structure test needs no `apache-airflow` — it parses the DAG file with
+      `ast` and runs in the shared `.venv` (see Completion Notes for why airflow
+      is kept out of the venv).
 - [x] Failing DAG structure test (`tests/test_dbt_transform_dag.py`)
 - [x] Implement `dags/dbt_transform_dag.py` (per plan)
 - [x] `docker-compose.airflow.yml` (LocalExecutor + Postgres + ADC bind)
@@ -48,9 +48,9 @@ Spec: `docs/superpowers/specs/2026-07-18-faza-6-eval-airflow-stream-merge-design
 ## Notes
 - Deliberately single-purpose (dbt run+test), manually triggered — not a
   production cron, no Cloud Composer (YAGNI, per spec). No `genai/`/`api/`
-  changes. `apache-airflow` in `.venv` is only for the import test; the
-  container has its own runtime. Do NOT add airflow to `requirements.txt`
-  (it's a heavy dev-only import; note it in the learn doc instead).
+  changes. The structure test parses the DAG with `ast` — no airflow needed in
+  any dev venv; the container has its own runtime. Do NOT add airflow to
+  `requirements.txt` (it's a heavy dev-only import; note it in the learn doc).
 
 ## Dev Agent Record
 ### Agent Model Used
@@ -61,9 +61,8 @@ claude-opus-4-8 (1M context), autonomous mode.
   `Compilation Error: dbt expects 1 package(s) ... dbt_utils ... Run "dbt deps"`.
   Root cause: `dbt_packages/` is gitignored and empty in a fresh container.
 - Codex review returned P1 (dbt package path not writable on the host-owned
-  bind mount → not portable to Linux) and P2 (module-level `importorskip` meant
-  the default suite never loaded the DAG file). Both addressed — see Completion
-  Notes / DECISIONS.md D5, D6.
+  bind mount → not portable to Linux) and P2 (structure test skipped in the
+  default suite). Both addressed — see Completion Notes / DECISIONS.md D5, D6.
 - Codex round 2 flagged a further P2: `dbt run` skips `dbt seed`, but marts dims
   ref() seed tables → fails on a fresh warehouse. Fixed by folding `dbt seed`
   into `dbt_run` (DECISIONS.md D7).
@@ -81,26 +80,24 @@ claude-opus-4-8 (1M context), autonomous mode.
 - `docker-compose.airflow.yml`: Airflow 2.10.4 LocalExecutor + Postgres, mounts
   `dags/`+`dbt/`, read-only ADC bind (Faza 2 pattern), `dbt-bigquery>=1.8,<2.0`
   in-container.
-- Structure test split into an AST layer (runs in the shared `.venv`, no
-  airflow — guards syntax/symbol/dependency regressions) + an import layer
-  (`skipif(not HAS_AIRFLOW)`, runs under `.venv-airflow`) (Codex P2).
+- Structure test is `ast`-based: it parses `dags/dbt_transform_dag.py` and
+  asserts dag_id / the two task ids / the `dbt_run >> dbt_test` dependency /
+  `schedule=None` / `catchup=False` — no airflow import, so it runs in the
+  shared `.venv` with no skips (Codex P2; simplified from an earlier
+  isolated-venv approach at the operator's request).
 - **Deviation from plan Step 1 (deliberate, documented in DECISIONS.md D1):** did
   NOT install `apache-airflow` into the shared mainline `.venv`. That venv is
   Python 3.14 (airflow 2.10 requires <3.13), and a 3.14-compatible airflow would
   downgrade the shared `fastapi` and break cohort peer bob's `api/main.py` work.
-  Used an isolated `.venv-airflow` (py3.11, airflow 2.10.4 — matches the
-  container) for the structure test, and `pytest.importorskip("airflow")` so the
-  full mainline suite stays green (the DAG test skips under `.venv`). Airflow is
-  NOT added to `requirements.txt` (per Notes).
-- Verification: structure tests 6 passed (`.venv-airflow`); mainline
-  3 passed / 3 skipped for the DAG file; full mainline suite 88 passed,
-  3 skipped, 5 deselected; live DAG run both tasks green.
+  The `ast` test needs no airflow at all; real Airflow import/execution is proven
+  by the live docker run. Airflow is NOT added to `requirements.txt` (per Notes).
+- Verification: DAG structure test 3 passed (mainline `.venv`, no skips); full
+  mainline suite 88 passed, 5 deselected; live DAG run both tasks green.
 
 ### File List
 - `dags/dbt_transform_dag.py` (NEW)
 - `docker-compose.airflow.yml` (NEW)
 - `tests/test_dbt_transform_dag.py` (NEW)
-- `.gitignore` (UPDATE — ignore `.venv-airflow/`)
 - `docs/learn/faza-6-airflow.md` (NEW)
 - `docs/features/faza-6-eval-airflow/faza-6-task-3/README.md` (NEW)
 - `docs/tasks/faza-6-task-3.md` (UPDATE — this story close-out)

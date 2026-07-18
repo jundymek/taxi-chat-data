@@ -1,7 +1,4 @@
 .venv/
-# Isolated venv holding apache-airflow only for the DAG structure import test
-# (kept out of the shared mainline .venv — see docs/learn/faza-6-airflow.md).
-.venv-airflow/
 __pycache__/
 *.pyc
 .env

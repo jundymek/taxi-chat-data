@@ -1,34 +1,24 @@
-"""Tests for the dbt_transform Airflow DAG.
+"""Structure test for the dbt_transform Airflow DAG.
 
-Two layers, so the DAG is guarded in BOTH environments:
+Validates the DAG by parsing `dags/dbt_transform_dag.py` with the `ast` module —
+no Airflow import, so it runs in the shared mainline `.venv` (which deliberately
+has no `apache-airflow`: that venv is Python 3.14, on which airflow 2.10 cannot
+install, and a 3.14-compatible airflow would clash with the shared API stack —
+see docs/learn/faza-6-airflow.md). Parsing catches the regressions that matter
+here — syntax errors, a renamed `dag`/task symbol, a dropped `dbt_run >>
+dbt_test` dependency, or a changed schedule.
 
-1. AST-based structural checks that parse `dags/dbt_transform_dag.py` WITHOUT
-   importing Airflow. These run in the shared mainline `.venv` (which
-   deliberately has no `apache-airflow` — see docs/learn/faza-6-airflow.md) and
-   catch syntax errors, a renamed `dag`/task symbol, a dropped dependency, or a
-   changed schedule — the regressions a skipped test would miss.
-2. Import-based checks that build the real DAG object. These need Airflow and so
-   are skipped unless it is importable; they run for real under the isolated
-   `.venv-airflow` (Airflow 2.10.4 / py3.11, matching the container) and via the
-   live docker-compose run.
+That the file also imports and runs as a real Airflow DAG is proven end-to-end
+by the docker-compose live run (an operator step) — a stronger check than a
+venv-level import, so it is not duplicated here.
 """
 import ast
-import importlib.util
 from pathlib import Path
-
-import pytest
 
 DAG_FILE = Path(__file__).resolve().parent.parent / "dags" / "dbt_transform_dag.py"
 SOURCE = DAG_FILE.read_text(encoding="utf-8")
 TREE = ast.parse(SOURCE)  # raises SyntaxError on a broken DAG file
 
-HAS_AIRFLOW = importlib.util.find_spec("airflow") is not None
-requires_airflow = pytest.mark.skipif(
-    not HAS_AIRFLOW, reason="apache-airflow not installed (run under .venv-airflow)"
-)
-
-
-# ---- Layer 1: AST checks (no Airflow needed) --------------------------------
 
 def _calls_named(name: str):
     """All Call nodes whose callee is `name` (bare or attribute access)."""
@@ -89,36 +79,3 @@ def test_dag_is_manually_triggered_not_scheduled():
     catchup = _kwarg(dag_call, "catchup")
     assert isinstance(schedule, ast.Constant) and schedule.value is None
     assert isinstance(catchup, ast.Constant) and catchup.value is False
-
-
-# ---- Layer 2: import checks (need Airflow) ----------------------------------
-
-def _load_dag_module():
-    spec = importlib.util.spec_from_file_location("dbt_transform_dag", DAG_FILE)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@requires_airflow
-def test_dag_imports_and_has_the_expected_id():
-    module = _load_dag_module()
-    assert hasattr(module, "dag")
-    assert module.dag.dag_id == "dbt_transform"
-
-
-@requires_airflow
-def test_dag_task_graph_is_run_then_test():
-    dag = _load_dag_module().dag
-    assert set(dag.task_ids) == {"dbt_run", "dbt_test"}
-    run = dag.get_task("dbt_run")
-    test = dag.get_task("dbt_test")
-    assert "dbt_test" in {t.task_id for t in run.downstream_list}
-    assert "dbt_run" in {t.task_id for t in test.upstream_list}
-
-
-@requires_airflow
-def test_dag_schedule_and_catchup_on_the_built_object():
-    dag = _load_dag_module().dag
-    assert dag.schedule_interval is None
-    assert dag.catchup is False

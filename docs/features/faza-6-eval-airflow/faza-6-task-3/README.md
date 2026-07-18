@@ -7,26 +7,25 @@ project. `dags/dbt_transform_dag.py` defines `dag_id="dbt_transform"` with two
 `schedule=None`, `catchup=False`. `docker-compose.airflow.yml` runs Airflow
 2.10.4 (LocalExecutor) + a Postgres metadata DB, mounts `dags/` and `dbt/`,
 binds ADC read-only, and installs `dbt-bigquery` in-container. The DAG is
-validated by an import-only structure test — no live scheduler needed.
+validated by an `ast`-based structure test (no Airflow import needed) plus the
+live docker-compose run.
 
 ## Files touched
 - `dags/dbt_transform_dag.py` (NEW) — the DAG (Airflow 2.x API, matches the container).
 - `docker-compose.airflow.yml` (NEW) — Airflow LocalExecutor + Postgres + ADC bind; `dbt-bigquery>=1.8,<2.0`.
-- `tests/test_dbt_transform_dag.py` (NEW) — two layers: AST checks (run without airflow) + import checks (`skipif(not HAS_AIRFLOW)`).
-- `.gitignore` (UPDATE) — ignore the isolated `.venv-airflow/`.
+- `tests/test_dbt_transform_dag.py` (NEW) — `ast`-based structure test, no airflow import.
 - `docs/learn/faza-6-airflow.md` (NEW) — Polish learning note.
 - `docs/tasks/faza-6-task-3.md` (UPDATE) — story close-out.
 
 ## Key decisions
-- **`apache-airflow` is NOT installed into the shared mainline `.venv`.** That
-  venv is Python 3.14 (airflow 2.10 requires <3.13), and an airflow that does
+- **`apache-airflow` is NOT installed into any dev venv.** The shared mainline
+  `.venv` is Python 3.14 (airflow 2.10 requires <3.13), and an airflow that does
   support 3.14 would downgrade the shared `fastapi` and pull ~70 heavy deps —
-  breaking cohort peer bob's API work. Instead the import test runs against an
-  isolated `.venv-airflow` (python3.11, `apache-airflow==2.10.4`, matching the
-  container image exactly), and the test uses `pytest.importorskip("airflow")`
-  so the full mainline suite stays green (the DAG test skips there). Details in
-  `DECISIONS.md` D1/D2 and the learn note. Airflow stays out of
-  `requirements.txt` (dev-only import).
+  breaking cohort peer bob's API work. So the structure test parses the DAG file
+  with `ast` (no airflow import) and runs in the mainline `.venv` with zero
+  skips; that the file really imports/runs as an Airflow DAG is proven by the
+  live docker run (stronger than a venv import). Airflow stays out of
+  `requirements.txt` (dev-only). Details in `DECISIONS.md` D1.
 - **`BashOperator` + dbt (not a dbt-airflow plugin).** Single-purpose, manually
   triggered — demonstrates orchestration over the existing dbt project without
   extra abstraction (YAGNI, per spec). No Cloud Composer.
@@ -44,12 +43,10 @@ validated by an import-only structure test — no live scheduler needed.
   `marts` dataset — not only when someone seeded out-of-band (Codex P2).
 
 ## Verification
-- Structure tests: mainline `.venv` → **3 passed, 3 skipped** (AST layer runs;
-  airflow-import layer skips), so the default suite now guards syntax/symbol
-  regressions (Codex P2). Isolated `.venv-airflow` → **6 passed**
-  (`.venv-airflow/bin/python -m pytest tests/test_dbt_transform_dag.py -v`).
-- Full mainline suite: `.venv/bin/pytest -q` → **88 passed, 3 skipped,
-  5 deselected** (integration).
+- Structure test: mainline `.venv/bin/pytest tests/test_dbt_transform_dag.py -v`
+  → **3 passed, 0 skipped** (`ast`-based, no airflow needed).
+- Full mainline suite: `.venv/bin/pytest -q` → **88 passed, 5 deselected**
+  (integration) — fully green, no skips.
 - Live docker-compose run (`-p taxi_pamela_airflow`, run
   `manual__2026-07-18T21:26:21+00:00`, after merging faza-6-task-1's
   `stg_trips`): DAG **success**, both tasks green:
