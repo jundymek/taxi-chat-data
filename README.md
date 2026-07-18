@@ -9,7 +9,7 @@ Full design: `docs/DESIGN.md`. Current phase plan: `docs/superpowers/plans/`.
 - [x] Faza 2: data warehouse (dbt, star schema)
 - [x] Faza 3: GenAI (RAG + NL2SQL + guardrails)
 - [x] Faza 4: streaming (Pub/Sub)
-- [ ] Faza 5: FastAPI + frontend
+- [x] Faza 5: FastAPI + frontend
 - [ ] Faza 6: evaluation + Airflow
 - [ ] Faza 7: DevSecOps
 
@@ -65,6 +65,33 @@ BigQuery dry-run scan gate 1 GB) → execution capped by `maximum_bytes_billed`
 validate→regenerate retry cycle (max 3 attempts, then graceful refusal).
 
 Tests: `pytest` (unit, mocked); `pytest -m integration` (live Ollama + BigQuery).
+
+## Chat UI (Faza 5)
+
+A single-screen web app over the Faza 3 pipeline: `POST /chat` streams each
+pipeline stage over **SSE** (a FastAPI adapter around LangGraph `stream()` — no
+`genai/` changes), `GET /health` reports Ollama/BigQuery/Chroma status, and a
+Vite + React + TypeScript SPA (owner-approved mockup C1, "Linia M") renders the
+live stage timeline — including red **ODRZUCONE** guardrail rejections — then
+the answer, SQL, rows and GB scanned. The SSE frame contract is
+`api/schemas.py` (mirrored 1:1 in `frontend/src/types.ts`).
+
+1. Prerequisites: the Faza 3 stack (Ollama, ADC, `.venv/bin/python -m
+   genai.indexer` if `data/chroma/` is missing).
+2. Build the frontend and serve everything on one port:
+   ```bash
+   cd frontend && pnpm install && pnpm run build && cd ..
+   .venv/bin/uvicorn api.main:app --port 8000
+   ```
+3. Open `http://localhost:8000` — the API serves `frontend/dist` statically, so
+   the whole app lives on `:8000`. Ask a question and watch the stages stream.
+
+Dev mode (hot reload, Vite proxies `/chat` + `/health` to `:8000`):
+`cd frontend && pnpm dev` alongside the uvicorn process.
+
+Tests: `.venv/bin/pytest` (API SSE frame sequences incl. retry/refusal/error,
+no live services); `cd frontend && pnpm test` (parser chunking, hook stream
+lifecycle, C1 components).
 
 ## Mapping to job requirements
 See section 10 in `docs/DESIGN.md`. Faza 3 highlights: NL2SQL + risk mitigation
