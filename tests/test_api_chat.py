@@ -120,6 +120,29 @@ def test_empty_question_is_422():
     assert client.post("/chat", json={}).status_code == 422
 
 
+def test_check_chroma_ok_only_when_both_collections_present(tmp_path, monkeypatch):
+    import chromadb
+
+    import api.main as main
+    from genai import config
+    from genai.indexer import EXAMPLES_COLLECTION, SCHEMA_COLLECTION
+
+    # Nonexistent directory -> "missing".
+    monkeypatch.setattr(config, "CHROMA_DIR", tmp_path / "nope")
+    assert main._check_chroma() == "missing"
+
+    # Directory exists but the collections were never built -> "missing"
+    # (this is the false-positive the folder-exists check would have reported ok).
+    monkeypatch.setattr(config, "CHROMA_DIR", tmp_path)
+    client = chromadb.PersistentClient(path=str(tmp_path))
+    assert main._check_chroma() == "missing"
+
+    # Both collections present -> "ok".
+    client.create_collection(SCHEMA_COLLECTION)
+    client.create_collection(EXAMPLES_COLLECTION)
+    assert main._check_chroma() == "ok"
+
+
 def test_health_reports_each_dependency(monkeypatch):
     import api.main as main
     monkeypatch.setattr(main, "_check_ollama", lambda: "ok")

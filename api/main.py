@@ -98,7 +98,20 @@ def _check_bigquery() -> str:
 
 
 def _check_chroma() -> str:
-    return "ok" if Path(config.CHROMA_DIR).exists() else "missing"
+    # Directory-exists is not enough: the retriever needs BOTH collections
+    # (schema_docs + few_shot_examples). Open them so a never-built, partial, or
+    # corrupted index reports "missing" instead of a false "ok".
+    try:
+        if not Path(config.CHROMA_DIR).exists():
+            return "missing"
+        import chromadb
+        from genai.indexer import EXAMPLES_COLLECTION, SCHEMA_COLLECTION
+        client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
+        for collection in (SCHEMA_COLLECTION, EXAMPLES_COLLECTION):
+            client.get_collection(collection)
+        return "ok"
+    except Exception:
+        return "missing"
 
 
 def create_app(pipeline_factory=None) -> FastAPI:

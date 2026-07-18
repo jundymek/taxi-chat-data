@@ -66,12 +66,14 @@ Claude Opus 4.8 (1M context) — `claude-opus-4-8[1m]`.
   DECISIONS.md D5 and PR summary.
 - Cohort intent-sync with bob (Task 2) completed before any code; SSE wire
   format agreed 1:1.
-- Tests: `tests/test_api_chat.py` → 7 passed (6 from the plan + 1 regression
-  for a codex P2: first-request pipeline build failure → terminal `error` frame,
-  not a raw 500); full suite → 84 passed, 5 deselected (integration). Manual
+- Tests: `tests/test_api_chat.py` → 8 passed (6 from the plan + 2 regressions
+  for codex P2s); full suite → 85 passed, 5 deselected (integration). Manual
   smoke green (import, /health 200, /chat SSE, empty→422).
-- Codex review (session 019f75b3): 1 finding [P2], fixed (build resolver moved
-  inside the streamed try + regression test); re-run clean.
+- Codex review: 2 findings across two rounds, both [P2], both fixed —
+  (1) build the pipeline inside the streamed try so a first-request build
+  failure yields a terminal `error` frame, not a raw 500; (2) `_check_chroma`
+  verifies both Chroma collections rather than just the directory (no false
+  "ok"). Each has a regression test; final re-run clean.
 
 ### File List
 - `api/main.py` (NEW)
