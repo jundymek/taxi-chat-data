@@ -23,14 +23,18 @@ DBT_DIR = "/opt/airflow/dbt"
 default_args = {"retries": 0, "email_on_failure": False, "email_on_retry": False}
 
 
-def _dbt_command(dbt_subcommand: str) -> str:
+def _dbt_command(*dbt_subcommands: str) -> str:
     """Copy the mounted project into a writable temp dir, install deps, then run
-    the given dbt subcommand there. Self-contained so each task works
-    independently and on any host OS."""
+    the given dbt subcommands there, in order. Self-contained so each task works
+    independently and on any host OS. `dbt_run` runs `seed` before `run` because
+    the marts dims ref() the seed lookup tables — so the DAG succeeds even on a
+    fresh `marts` dataset, not only when someone has seeded out-of-band."""
+    steps = " && ".join(
+        f"dbt {cmd} --profiles-dir \"$WORK\"" for cmd in dbt_subcommands
+    )
     return (
         f"set -e && WORK=$(mktemp -d) && cp -a {DBT_DIR}/. \"$WORK\"/ "
-        f"&& cd \"$WORK\" && dbt deps "
-        f"&& dbt {dbt_subcommand} --profiles-dir \"$WORK\""
+        f"&& cd \"$WORK\" && dbt deps && {steps}"
     )
 
 
@@ -45,7 +49,7 @@ with DAG(
 ) as dag:
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command=_dbt_command("run"),
+        bash_command=_dbt_command("seed", "run"),
     )
     dbt_test = BashOperator(
         task_id="dbt_test",

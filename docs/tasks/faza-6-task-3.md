@@ -64,16 +64,20 @@ claude-opus-4-8 (1M context), autonomous mode.
   bind mount → not portable to Linux) and P2 (module-level `importorskip` meant
   the default suite never loaded the DAG file). Both addressed — see Completion
   Notes / DECISIONS.md D5, D6.
-- Final live run `manual__2026-07-18T21:17:32+00:00` (copy-to-temp path): DAG
-  success — `dbt_run` PASS=6 (installs dbt_utils 1.4.1 into the copy),
-  `dbt_test` PASS=25 (incl. `unique_stg_trips_trip_key`).
+- Codex round 2 flagged a further P2: `dbt run` skips `dbt seed`, but marts dims
+  ref() seed tables → fails on a fresh warehouse. Fixed by folding `dbt seed`
+  into `dbt_run` (DECISIONS.md D7).
+- Final live run `manual__2026-07-18T21:26:21+00:00` (deps + seed + run): DAG
+  success — seeds PASS=3, models PASS=6, `dbt_test` PASS=25 (incl.
+  `unique_stg_trips_trip_key`).
 
 ### Completion Notes
 - DAG `dbt_transform`: two `BashOperator` tasks `dbt_run >> dbt_test`,
   `schedule=None`, `catchup=False`. Each task copies the mounted dbt project
-  into a writable `mktemp -d` dir, then runs `dbt deps && dbt <run|test>` there
-  — installs the dbt_utils dependency and stays portable across host OSes
-  (Codex P1). Still exactly two tasks.
+  into a writable `mktemp -d` dir, then runs dbt there — portable across host
+  OSes (Codex P1). `dbt_run` = `dbt deps && dbt seed && dbt run` so it is
+  self-contained on a fresh warehouse (Codex P2, D7); `dbt_test` = `dbt deps &&
+  dbt test`. Still exactly two tasks.
 - `docker-compose.airflow.yml`: Airflow 2.10.4 LocalExecutor + Postgres, mounts
   `dags/`+`dbt/`, read-only ADC bind (Faza 2 pattern), `dbt-bigquery>=1.8,<2.0`
   in-container.

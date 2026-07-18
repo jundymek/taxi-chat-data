@@ -34,10 +34,14 @@ validated by an import-only structure test — no live scheduler needed.
   proven Faza 2 pattern; the container authenticates as the operator, no
   service-account key files created.
 - **Each task copies the mounted dbt project into a writable temp dir**
-  (`mktemp -d`) before running `dbt deps && dbt <run|test>`. The bind-mounted
-  `dbt/` is host-owned and not writable by the in-container `airflow` user on
-  Linux; `dbt deps` must write `dbt_packages/`. Copying makes the DAG portable
-  across macOS and Linux hosts (Codex P1).
+  (`mktemp -d`) before running dbt. The bind-mounted `dbt/` is host-owned and
+  not writable by the in-container `airflow` user on Linux; `dbt deps` must
+  write `dbt_packages/`. Copying makes the DAG portable across macOS and Linux
+  hosts (Codex P1).
+- **`dbt_run` runs `dbt deps && dbt seed && dbt run`** (still one task). The
+  marts dims (`dim_location`/`dim_payment`/`dim_ratecode`) `ref()` the seed
+  lookup tables, so seeding first makes the DAG self-contained even on a fresh
+  `marts` dataset — not only when someone seeded out-of-band (Codex P2).
 
 ## Verification
 - Structure tests: mainline `.venv` → **3 passed, 3 skipped** (AST layer runs;
@@ -47,9 +51,10 @@ validated by an import-only structure test — no live scheduler needed.
 - Full mainline suite: `.venv/bin/pytest -q` → **88 passed, 3 skipped,
   5 deselected** (integration).
 - Live docker-compose run (`-p taxi_pamela_airflow`, run
-  `manual__2026-07-18T21:17:32+00:00`, after merging faza-6-task-1's
+  `manual__2026-07-18T21:26:21+00:00`, after merging faza-6-task-1's
   `stg_trips`): DAG **success**, both tasks green:
-  - `dbt_run` (42s) — installs `dbt_utils` 1.4.1 into the temp copy, then
-    `Done. PASS=6 WARN=0 ERROR=0` (5 tables + `stg_trips` view), via mounted ADC.
-  - `dbt_test` (50s) — `Done. PASS=25 WARN=0 ERROR=0`, including
+  - `dbt_run` (54s) — installs `dbt_utils` 1.4.1, seeds the lookups
+    (`Done. PASS=3` — payment_type 7 / ratecode 6 / taxi_zone 265 rows), then
+    builds models (`Done. PASS=6`), via mounted ADC.
+  - `dbt_test` (45s) — `Done. PASS=25 WARN=0 ERROR=0`, including
     `unique_stg_trips_trip_key` (proves the raw+stream dedup from task-1).
