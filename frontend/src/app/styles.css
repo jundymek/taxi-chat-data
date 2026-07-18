@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/* Binding visual tokens from the OWNER-APPROVED mockup C1 (§ .c1). Declared
+   once here so Tailwind utilities (bg-line, text-ok, border-err, font-mono, …)
+   and the custom timeline layer below share the same palette. */
+@theme {
+  --color-ink: #111111;
+  --color-paper: #ffffff;
+  --color-line: #fccc0a; /* yellow route line */
+  --color-ok: #00933c; /* green station / OK */
+  --color-err: #d0021b; /* red rejection */
+
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+/* ---- C1 metro stage-timeline (custom layer) ----
+   Kept as plain CSS: the route line, station dots and dotted leader are
+   pseudo-elements that don't map cleanly to utility classes. */
+.timeline {
+  list-style: none;
+  margin: 26px 0 6px;
+  padding: 0 0 0 34px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 4px;
+  bottom: 4px;
+  width: 8px;
+  background: var(--color-line);
+  border-radius: 4px;
+}
+.station {
+  position: relative;
+  font-size: 0.95rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.station::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 0.28em;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-ok);
+  border: 3px solid var(--color-ok);
+}
+.station.err::before {
+  background: var(--color-err);
+  border-color: var(--color-err);
+}
+.station.pending::before {
+  background: #fff;
+  border-color: #bbb;
+}
+.station .dots {
+  flex: 1;
+  border-bottom: 1px dotted #bbb;
+  transform: translateY(-4px);
+}
+.station .st {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--color-ok);
+  letter-spacing: 0.08em;
+}
+.station.err .st {
+  color: var(--color-err);
+}
+.station .why {
+  /* Full-width so a multi-line guardrail reason flows below the row and pushes
+     the next station down (mockup used absolute positioning, which overlapped
+     the next station when the reason wrapped). */
+  flex-basis: 100%;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--color-err);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .station {
+    animation: arrive 0.2s ease-out;
+  }
+  @keyframes arrive {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+}
