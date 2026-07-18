@@ -102,6 +102,18 @@ def test_midstream_exception_yields_terminal_error_frame():
     assert not any(f["stage"] == "done" for f in frames)
 
 
+def test_pipeline_build_failure_yields_terminal_error_frame():
+    # A first-request build failure (e.g. bad ADC / missing index) must end the
+    # SSE protocol with a terminal `error` frame, not a raw HTTP 500.
+    def boom():
+        raise RuntimeError("BigQuery credentials missing")
+
+    frames = _frames(TestClient(create_app(boom)))
+    assert frames[-1]["stage"] == "error"
+    assert "BigQuery credentials missing" in frames[-1]["message"]
+    assert not any(f["stage"] == "done" for f in frames)
+
+
 def test_empty_question_is_422():
     client = TestClient(create_app(lambda: FakePipeline([])))
     assert client.post("/chat", json={"question": ""}).status_code == 422

@@ -26,9 +26,10 @@ intent-synced 1:1 before any code.
 
 ## Files touched
 - `api/main.py` (NEW) — SSE adapter, `/chat`, `/health`, static mount.
-- `tests/test_api_chat.py` (NEW, 6 tests) — fake pipeline + stubbed probes, no
+- `tests/test_api_chat.py` (NEW, 7 tests) — fake pipeline + stubbed probes, no
   live services: happy-path frame order + done, retry with two validate frames,
-  refusal-is-done-not-error, mid-stream LLMError → terminal error, empty→422,
+  refusal-is-done-not-error, mid-stream LLMError → terminal error, first-request
+  pipeline build failure → terminal error (codex P2 regression), empty→422,
   health reports each dependency.
 - `docs/learn/faza-5-fastapi-sse.md` (NEW) — Polish learning note.
 - `docs/tasks/faza-5-task-1.md` (UPDATE) — story close-out.
@@ -52,9 +53,9 @@ intent-synced 1:1 before any code.
   works under both TestClient and uvicorn. See `DECISIONS.md` D5.
 
 ## Verification
-- `.venv/bin/pytest tests/test_api_chat.py -v` → **6 passed** (fake pipeline,
-  no live services).
-- `.venv/bin/pytest` (full suite) → **83 passed, 5 deselected** (integration).
+- `.venv/bin/pytest tests/test_api_chat.py -v` → **7 passed** (6 from the plan +
+  1 codex-P2 regression; fake pipeline, no live services).
+- `.venv/bin/pytest` (full suite) → **84 passed, 5 deselected** (integration).
 - Manual smoke: module imports without building anything; `GET /health` → 200
   with the three-key body (probes stubbed); `POST /chat` → `text/event-stream`
   emitting ordered frames; empty question → 422.

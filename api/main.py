@@ -58,9 +58,13 @@ def _done_frame(state: dict) -> Frame:
     ))
 
 
-def stream_chat(pipeline, question: str) -> Iterator[bytes]:
+def stream_chat(get_pipeline, question: str) -> Iterator[bytes]:
+    # `get_pipeline` is a zero-arg resolver, called INSIDE the try so a first-
+    # request build failure (bad ADC, missing index) ends the protocol with a
+    # terminal `error` frame — never a raw 500 that bypasses the SSE contract.
     state: dict = {"question": question}
     try:
+        pipeline = get_pipeline()
         for update in pipeline.stream({"question": question}, stream_mode="updates"):
             for node, patch in update.items():
                 state.update(patch or {})
@@ -116,7 +120,7 @@ def create_app(pipeline_factory=None) -> FastAPI:
     @app.post("/chat")
     def chat(request: ChatRequest):
         return StreamingResponse(
-            stream_chat(_get_pipeline(), request.question),
+            stream_chat(_get_pipeline, request.question),
             media_type="text/event-stream",
         )
 
