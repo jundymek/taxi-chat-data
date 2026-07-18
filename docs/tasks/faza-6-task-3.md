@@ -60,17 +60,26 @@ claude-opus-4-8 (1M context), autonomous mode.
 - First live DAG run failed: `dbt_run` exit code 2 —
   `Compilation Error: dbt expects 1 package(s) ... dbt_utils ... Run "dbt deps"`.
   Root cause: `dbt_packages/` is gitignored and empty in a fresh container.
-  Fix: `dbt_run` bash command now runs `dbt deps && dbt run` (kept at two tasks).
-- Second live run `manual__2026-07-18T21:05:44+00:00`: DAG success — `dbt_run`
-  PASS=6, `dbt_test` PASS=25 (incl. `unique_stg_trips_trip_key`).
+- Codex review returned P1 (dbt package path not writable on the host-owned
+  bind mount → not portable to Linux) and P2 (module-level `importorskip` meant
+  the default suite never loaded the DAG file). Both addressed — see Completion
+  Notes / DECISIONS.md D5, D6.
+- Final live run `manual__2026-07-18T21:17:32+00:00` (copy-to-temp path): DAG
+  success — `dbt_run` PASS=6 (installs dbt_utils 1.4.1 into the copy),
+  `dbt_test` PASS=25 (incl. `unique_stg_trips_trip_key`).
 
 ### Completion Notes
 - DAG `dbt_transform`: two `BashOperator` tasks `dbt_run >> dbt_test`,
-  `schedule=None`, `catchup=False`. `dbt_run` runs `dbt deps && dbt run` so the
-  dbt_utils dependency installs in a fresh container (still exactly two tasks).
+  `schedule=None`, `catchup=False`. Each task copies the mounted dbt project
+  into a writable `mktemp -d` dir, then runs `dbt deps && dbt <run|test>` there
+  — installs the dbt_utils dependency and stays portable across host OSes
+  (Codex P1). Still exactly two tasks.
 - `docker-compose.airflow.yml`: Airflow 2.10.4 LocalExecutor + Postgres, mounts
   `dags/`+`dbt/`, read-only ADC bind (Faza 2 pattern), `dbt-bigquery>=1.8,<2.0`
-  in-container, `DBT_LOG_PATH`/`DBT_TARGET_PATH` → `/tmp` for writable artifacts.
+  in-container.
+- Structure test split into an AST layer (runs in the shared `.venv`, no
+  airflow — guards syntax/symbol/dependency regressions) + an import layer
+  (`skipif(not HAS_AIRFLOW)`, runs under `.venv-airflow`) (Codex P2).
 - **Deviation from plan Step 1 (deliberate, documented in DECISIONS.md D1):** did
   NOT install `apache-airflow` into the shared mainline `.venv`. That venv is
   Python 3.14 (airflow 2.10 requires <3.13), and a 3.14-compatible airflow would
@@ -79,8 +88,9 @@ claude-opus-4-8 (1M context), autonomous mode.
   container) for the structure test, and `pytest.importorskip("airflow")` so the
   full mainline suite stays green (the DAG test skips under `.venv`). Airflow is
   NOT added to `requirements.txt` (per Notes).
-- Verification: structure test 3 passed (`.venv-airflow`); full mainline suite
-  85 passed, 1 skipped, 5 deselected; live DAG run both tasks green.
+- Verification: structure tests 6 passed (`.venv-airflow`); mainline
+  3 passed / 3 skipped for the DAG file; full mainline suite 88 passed,
+  3 skipped, 5 deselected; live DAG run both tasks green.
 
 ### File List
 - `dags/dbt_transform_dag.py` (NEW)

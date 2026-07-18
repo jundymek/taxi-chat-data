@@ -32,11 +32,9 @@ services:
       # ADC for dbt-bigquery (mounted read-only below).
       GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/gcloud/application_default_credentials.json
       GOOGLE_CLOUD_PROJECT: taxi-chat-data
-      # dbt writes target/ and logs/ to writable paths (the mounted dbt/ dir is
-      # owned by the host user, not the in-container airflow user).
-      DBT_LOG_PATH: /tmp/dbt_logs
-      DBT_TARGET_PATH: /tmp/dbt_target
-      # Match the project's own dbt Dockerfile pin.
+      # Match the project's own dbt Dockerfile pin. (The DAG copies the mounted
+      # dbt project into a writable temp dir before running, so dbt deps/target/
+      # logs never need to write to the host-owned bind mount — portable to Linux.)
       _PIP_ADDITIONAL_REQUIREMENTS: "dbt-bigquery>=1.8,<2.0"
     volumes:
       - ./dags:/opt/airflow/dags
