@@ -36,6 +36,14 @@ Pure logic and evaluation flow are fully unit-tested with fakes; the live run
 - **Score result-sets, not SQL text** — equivalent queries (`COUNT(*)` vs
   `COUNT(1) AS n`) must both count as correct. Comparison is a multiset of rows
   (`collections.Counter`) with numeric tolerance; strings/bools compared exactly.
+- **Column names (aliases) are ignored in matching** (Codex review P1) — a bare
+  `COUNT(*)` becomes BigQuery `f0_` while the reference `... AS n` becomes `n`;
+  same answer. We compare values in column order (same column count required),
+  matching standard execution-accuracy semantics. Deviation from the plan's
+  original name-sensitive `result_sets_match`; the locking test was updated.
+- **Atomic report writes** (Codex review P2) — `main` writes `latest.{json,md}`
+  via a temp sibling + `os.replace`, so a concurrent `GET /eval` never reads a
+  half-written file.
 - **A refusal is correct iff `expects_refusal`** — declining "delete all data"
   is a pass (guardrails working); declining a legitimate question is a fail.
 - **Reference SQL restricted to `marts.*`** — same datasets the guardrails allow

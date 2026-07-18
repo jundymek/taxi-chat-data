@@ -27,8 +27,14 @@ def test_rejects_different_row_count():
     assert result_sets_match([{"c": 1}], [{"c": 1}, {"c": 2}]) is False
 
 
-def test_rejects_different_columns():
-    assert result_sets_match([{"a": 1}], [{"b": 1}]) is False
+def test_ignores_column_aliases_when_values_match():
+    # SQL aliases are arbitrary: a bare COUNT(*) (BigQuery `f0_`) must match a
+    # reference `COUNT(*) AS n` — same answer, different column name.
+    assert result_sets_match([{"f0_": 1}], [{"n": 1}]) is True
+
+
+def test_rejects_different_column_count():
+    assert result_sets_match([{"a": 1}], [{"a": 1, "b": 2}]) is False
 
 
 def test_matches_multi_column_rows_order_insensitive():

@@ -5,6 +5,7 @@ live run (Ollama + BigQuery) is an operator step via `python -m genai.eval`.
 from __future__ import annotations
 
 import json
+import os
 from collections import Counter
 from dataclasses import dataclass, field
 from math import isclose
@@ -74,14 +75,18 @@ def load_questions(path: str | Path | None = None) -> list[EvalCase]:
 
 
 def _row_key(row: dict, tol: float):
-    # Rows are compared as multisets; make a hashable, tolerance-rounded key.
+    # Column NAMES are ignored — SQL aliases are arbitrary (a model's bare
+    # `COUNT(*)` becomes BigQuery's `f0_`, the reference's `COUNT(*) AS n`
+    # becomes `n`; same answer). We compare values in column order, tagging each
+    # by kind so a number never collides with a same-looking string. Numbers are
+    # snapped to a tolerance grid; bools/strings compared exactly.
     def norm(v):
         if isinstance(v, bool):
-            return v
+            return ("b", v)
         if isinstance(v, (int, float)):
-            return round(float(v) / tol) if tol else float(v)
-        return v
-    return tuple(sorted((k, norm(v)) for k, v in row.items()))
+            return ("n", round(float(v) / tol)) if tol else ("n", float(v))
+        return ("v", v)
+    return tuple(norm(v) for v in row.values())
 
 
 def result_sets_match(actual: list[dict], expected: list[dict], *, tol: float = 1e-6) -> bool:
@@ -89,9 +94,9 @@ def result_sets_match(actual: list[dict], expected: list[dict], *, tol: float = 
         return False
     if not actual:
         return True
-    # Same column set required (compare the first row of each — BQ result rows
-    # are uniform).
-    if set(actual[0].keys()) != set(expected[0].keys()):
+    # Same column COUNT required (names ignored — see _row_key). Result rows are
+    # uniform, so the first row is representative.
+    if len(actual[0]) != len(expected[0]):
         return False
     return Counter(_row_key(r, tol) for r in actual) == Counter(_row_key(r, tol) for r in expected)
 
@@ -202,15 +207,23 @@ def _report_to_dict(report: EvalReport) -> dict:
     }
 
 
+def _write_atomic(path: Path, text: str) -> None:
+    # Write to a temp sibling then os.replace — an atomic rename on POSIX — so a
+    # concurrent `GET /eval` reader never sees a half-written file.
+    tmp = path.with_name(f"{path.name}.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def main() -> None:
     report = run_eval()
     md = render_markdown(report)
     print(md)
     out_dir = config.REPO_ROOT / "docs" / "eval"
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "latest.json").write_text(
-        json.dumps(_report_to_dict(report), indent=2, ensure_ascii=False), encoding="utf-8")
-    (out_dir / "latest.md").write_text(md, encoding="utf-8")
+    _write_atomic(out_dir / "latest.json",
+                  json.dumps(_report_to_dict(report), indent=2, ensure_ascii=False))
+    _write_atomic(out_dir / "latest.md", md)
     print(f"Zapisano raport do {out_dir}/latest.json + latest.md")
 
 

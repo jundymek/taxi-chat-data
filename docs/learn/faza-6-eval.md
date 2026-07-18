@@ -31,7 +31,7 @@ prawda"). Uruchamiamy oba zapytania na BigQuery i porównujemy zbiory wierszy:
 Jeśli zbiory wierszy są równe → model odpowiedział poprawnie, niezależnie od tego,
 jak napisał zapytanie. To jest funkcja `result_sets_match`.
 
-### Dwie subtelności w porównaniu wyników
+### Trzy subtelności w porównaniu wyników
 
 1. **Niewrażliwość na kolejność.** `[{zone: A}, {zone: B}]` i
    `[{zone: B}, {zone: A}]` to ten sam wynik — SQL bez `ORDER BY` nie gwarantuje
@@ -41,6 +41,17 @@ jak napisał zapytanie. To jest funkcja `result_sets_match`.
    średnia — różnice biorą się z zaokrągleń zmiennoprzecinkowych. Porównujemy
    liczby z tolerancją (`abs_tol`), zaokrąglając do wspólnej „siatki" przed
    porównaniem. Stringi i wartości logiczne porównujemy dokładnie.
+3. **Niewrażliwość na nazwy kolumn (aliasy).** Alias w SQL jest dowolny: model
+   piszący `SELECT COUNT(*)` dostanie w BigQuery kolumnę `f0_`, a nasz referencyjny
+   `COUNT(*) AS n` — kolumnę `n`. To ta sama odpowiedź! Gdybyśmy porównywali po
+   nazwach kolumn, karalibyśmy model za brak dokładnie takiego aliasu jak w
+   referencji — czyli znów za styl, nie za poprawność. Dlatego porównujemy
+   **wartości w kolejności kolumn**, ignorując nazwy (wymagamy tylko tej samej
+   liczby kolumn). To standard w ewaluacji NL2SQL (np. „execution accuracy" w
+   benchmarku Spider). Kompromis: teoretycznie dwie różne metryki o tej samej
+   wartości liczbowej mogłyby fałszywie „pasować" — akceptujemy to, bo
+   systematyczne fałszywe negatywy z aliasów są znacznie groźniejsze niż rzadka
+   kolizja wartości, którą i tak redukują zapytania wielokolumnowe.
 
 `result_sets_match` jest **czystą funkcją** — bez BigQuery, bez sieci — więc
 testujemy ją w pełni jednostkowo (`tests/test_eval.py`).
