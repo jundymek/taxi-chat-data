@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import json
 import os
-from collections import Counter
 from dataclasses import dataclass, field
 from math import isclose
 from pathlib import Path
@@ -74,19 +73,21 @@ def load_questions(path: str | Path | None = None) -> list[EvalCase]:
     ]
 
 
-def _row_key(row: dict, tol: float):
+def _cells_match(a, b, tol: float) -> bool:
+    # bool is an int subclass — a boolean matches only another boolean, never a
+    # number (so True never equals 1).
+    if isinstance(a, bool) or isinstance(b, bool):
+        return isinstance(a, bool) and isinstance(b, bool) and a == b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return isclose(float(a), float(b), rel_tol=0.0, abs_tol=tol)
+    return a == b
+
+
+def _rows_match(a_row: dict, b_row: dict, tol: float) -> bool:
     # Column NAMES are ignored — SQL aliases are arbitrary (a model's bare
     # `COUNT(*)` becomes BigQuery's `f0_`, the reference's `COUNT(*) AS n`
-    # becomes `n`; same answer). We compare values in column order, tagging each
-    # by kind so a number never collides with a same-looking string. Numbers are
-    # snapped to a tolerance grid; bools/strings compared exactly.
-    def norm(v):
-        if isinstance(v, bool):
-            return ("b", v)
-        if isinstance(v, (int, float)):
-            return ("n", round(float(v) / tol)) if tol else ("n", float(v))
-        return ("v", v)
-    return tuple(norm(v) for v in row.values())
+    # becomes `n`; same answer). Compare values in column order.
+    return all(_cells_match(a, b, tol) for a, b in zip(a_row.values(), b_row.values()))
 
 
 def result_sets_match(actual: list[dict], expected: list[dict], *, tol: float = 1e-6) -> bool:
@@ -94,11 +95,23 @@ def result_sets_match(actual: list[dict], expected: list[dict], *, tol: float = 
         return False
     if not actual:
         return True
-    # Same column COUNT required (names ignored — see _row_key). Result rows are
-    # uniform, so the first row is representative.
+    # Same column COUNT required (names ignored — see _rows_match). Result rows
+    # are uniform, so the first row is representative.
     if len(actual[0]) != len(expected[0]):
         return False
-    return Counter(_row_key(r, tol) for r in actual) == Counter(_row_key(r, tol) for r in expected)
+    # Order-insensitive multiset match with real numeric tolerance: greedily pair
+    # each actual row to an as-yet-unmatched expected row it matches within `tol`.
+    # (True `abs_tol` matching, not tolerance buckets — values differing by ~tol
+    # near a bucket edge would otherwise be mis-split.)
+    remaining = list(expected)
+    for a_row in actual:
+        for i, b_row in enumerate(remaining):
+            if _rows_match(a_row, b_row, tol):
+                remaining.pop(i)
+                break
+        else:
+            return False
+    return True
 
 
 def _rows_from_job(job) -> list[dict]:

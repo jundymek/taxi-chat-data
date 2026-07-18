@@ -39,8 +39,12 @@ jak napisał zapytanie. To jest funkcja `result_sets_match`.
    `collections.Counter`), więc kolejność nie ma znaczenia.
 2. **Tolerancja numeryczna.** `4.16` i `4.160000001` to praktycznie ta sama
    średnia — różnice biorą się z zaokrągleń zmiennoprzecinkowych. Porównujemy
-   liczby z tolerancją (`abs_tol`), zaokrąglając do wspólnej „siatki" przed
-   porównaniem. Stringi i wartości logiczne porównujemy dokładnie.
+   liczby przez `math.isclose` z `abs_tol` (dwie wartości pasują, jeśli różnią
+   się o mniej niż tolerancja). Uwaga: kuszące „zaokrąglanie do wspólnej siatki"
+   (bucketowanie) jest subtelnie błędne — dwie liczby różniące się o ~tolerancję,
+   ale leżące po dwóch stronach granicy kubełka, zostałyby błędnie rozdzielone;
+   dlatego robimy prawdziwe porównanie `abs_tol`. Stringi i wartości logiczne
+   porównujemy dokładnie (a `bool` nigdy nie równa się liczbie).
 3. **Niewrażliwość na nazwy kolumn (aliasy).** Alias w SQL jest dowolny: model
    piszący `SELECT COUNT(*)` dostanie w BigQuery kolumnę `f0_`, a nasz referencyjny
    `COUNT(*) AS n` — kolumnę `n`. To ta sama odpowiedź! Gdybyśmy porównywali po

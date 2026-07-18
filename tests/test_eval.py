@@ -19,6 +19,18 @@ def test_matches_within_numeric_tolerance():
     assert result_sets_match([{"avg": 4.16}], [{"avg": 4.160000001}]) is True
 
 
+def test_tolerance_uses_abs_tol_not_rounding_buckets():
+    # Values within tol must match regardless of where they fall relative to a
+    # rounding-bucket edge; values beyond tol must not.
+    assert result_sets_match([{"x": 1.49e-6}], [{"x": 2.0e-6}], tol=1e-6) is True
+    assert result_sets_match([{"x": 1.0}], [{"x": 1.0 + 2e-6}], tol=1e-6) is False
+
+
+def test_boolean_never_matches_number():
+    assert result_sets_match([{"f": True}], [{"f": 1}]) is False
+    assert result_sets_match([{"f": True}], [{"f": True}]) is True
+
+
 def test_rejects_different_values():
     assert result_sets_match([{"avg": 4.16}], [{"avg": 9.99}]) is False
 
