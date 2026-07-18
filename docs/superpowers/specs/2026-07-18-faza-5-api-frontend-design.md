@@ -99,10 +99,18 @@ frontend/src/
 - Tests: vitest + RTL — parser unit tests (chunk splitting, partial frames),
   hook tests with a mocked stream, component render tests for each stage of
   the timeline and the three endings (answer / refusal / error).
-- **Visual design: mockups prepared with the frontend-design skill and
-  APPROVED BY THE OWNER before the frontend story is implemented** (approval
-  gate recorded in the plan; the chosen mockup is committed alongside the
-  spec as the visual reference).
+- **Visual design: APPROVED — variant "C1 / Linia M"** (owner-approved
+  2026-07-18). Reference file:
+  `docs/superpowers/specs/assets/2026-07-18-faza-5-mockup-c1-approved.html`
+  (the C1 section is binding; C2/C3 are rejected alternatives kept for
+  context). Visual tokens: white ground `#FFFFFF`, ink `#111111`, taxi/subway
+  yellow `#FCCC0A` (route line, ask button, brand bullet "M", highlight
+  chip), green `#00933C` (completed stage dots + `OK` status), red `#D0021B`
+  (rejected stage + `ODRZUCONE`), Helvetica/system sans + monospace for SQL,
+  numbers and stage statuses; black station-sign bars (header, result-card
+  header), 2px solid `#111` borders, no border-radius except circles/chips.
+  Stage rows: green station dot on the yellow route line, label left, dotted
+  leader, monospace status right; rejection reason in red under the row.
 
 ## Task split (for the ~/.terminal-agents harness)
 
