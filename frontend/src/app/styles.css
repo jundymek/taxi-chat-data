@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+/* Binding visual tokens from the OWNER-APPROVED mockup C1 (§ .c1). Declared
+   once here so Tailwind utilities (bg-line, text-ok, border-err, font-mono, …)
+   and the custom timeline layer below share the same palette. */
+@theme {
+  --color-ink: #111111;
+  --color-paper: #ffffff;
+  --color-line: #fccc0a; /* yellow route line */
+  --color-ok: #00933c; /* green station / OK */
+  --color-err: #d0021b; /* red rejection */
+
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+/* ---- C1 metro stage-timeline (custom layer) ----
+   One continuous route line (`.timeline::before`) with the dots centred on it.
+   A wrapped rejection reason is a full-width `.why` that flows BELOW its row, so
+   it grows the row height without ever moving a dot off the line. */
+.timeline {
+  list-style: none;
+  margin: 26px 0 6px;
+  padding: 0 0 0 34px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+/* Continuous yellow line. Its centre sits at 6 + 8/2 = 10px from .timeline's
+   left edge — the same X as each dot's centre (34 padding − 30 + 12/2 = 10px) —
+   so dots ride exactly on the line. */
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  bottom: 4px;
+  width: 8px;
+  background: var(--color-line);
+  border-radius: 4px;
+}
+/* When the last station is the pulsing pending one, stop the line at that dot's
+   centre instead of running past it to the container floor. The pending row is
+   a single label line, so its dot centre sits ~0.75em from the row top; ending
+   the line there keeps it from poking out below the hollow dot. */
+.timeline:has(.station.pending:last-child)::before {
+  bottom: calc(1.5rem - 0.75em);
+}
+.station {
+  position: relative;
+  font-size: 0.95rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+/* Green station dot, centred on the continuous line, anchored to the first
+   label line so a grown row never drifts it. */
+.station::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 0.28em;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-ok);
+  border: 3px solid var(--color-ok);
+}
+.station.err::before {
+  background: var(--color-err);
+  border-color: var(--color-err);
+}
+/* Pending station: same size/weight as a completed dot, in a neutral grey so it
+   reads as "not done yet" without looking flimsy. Opaque fill covers the line
+   beneath it. */
+.station.pending::before {
+  background: #bbb;
+  border-color: #bbb;
+}
+.station .dots {
+  flex: 1;
+  border-bottom: 1px dotted #bbb;
+  transform: translateY(-4px);
+}
+.station .st {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--color-ok);
+  letter-spacing: 0.08em;
+}
+.station.err .st {
+  color: var(--color-err);
+}
+.station .why {
+  /* Full-width so a multi-line reason flows below the row; indented to the text
+     band so the dot and line stay put. */
+  flex-basis: 100%;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--color-err);
+}
+/* Pulsing pending station: the WHOLE row (dot + label) breathes while the next
+   stage runs. Named `station-pulse` (not `pulse`) to avoid colliding with
+   Tailwind's own `@keyframes pulse`. */
+.station.pending {
+  animation: station-pulse 1.2s ease-in-out infinite;
+}
+.station.pending .lbl {
+  color: #888;
+}
+@keyframes station-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Not the pending row — it owns the continuous station-pulse animation. */
+  .station:not(.pending) { animation: arrive 0.2s ease-out; }
+  @keyframes arrive {
+    from { opacity: 0; transform: translateY(4px); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station.pending { animation: none; }
+}

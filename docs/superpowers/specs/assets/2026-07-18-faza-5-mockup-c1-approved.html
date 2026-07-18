@@ -1,0 +1,223 @@
+<title>Faza 5 — mockupy ekranu chatu (C1/C2/C3)</title>
+<style>
+  :root{
+    --page-bg:#f2f1ec; --page-ink:#22211c; --page-muted:#6d6a5e; --page-line:#d8d5ca; --acc:#b8860b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --page-bg:#191813; --page-ink:#e8e5da; --page-muted:#98937f; --page-line:#33312a; --acc:#d9a621; }
+  }
+  :root[data-theme="dark"]{ --page-bg:#191813; --page-ink:#e8e5da; --page-muted:#98937f; --page-line:#33312a; --acc:#d9a621; }
+  :root[data-theme="light"]{ --page-bg:#f2f1ec; --page-ink:#22211c; --page-muted:#6d6a5e; --page-line:#d8d5ca; --acc:#b8860b; }
+
+  body{ background:var(--page-bg); color:var(--page-ink);
+        font:16px/1.55 ui-sans-serif,system-ui,"Helvetica Neue",sans-serif; margin:0; }
+  .wrap{ max-width:860px; margin:0 auto; padding:40px 20px 80px; display:flex; flex-direction:column; gap:56px; }
+  header.intro h1{ font-size:1.7rem; margin:0 0 8px; text-wrap:balance; }
+  header.intro p{ color:var(--page-muted); margin:4px 0; max-width:62ch; }
+  .kbd{ border:1px solid var(--page-line); border-radius:4px; padding:0 6px; font-family:ui-monospace,monospace; font-size:.85em; }
+  section.variant{ display:flex; flex-direction:column; gap:14px; }
+  .vhead{ display:flex; align-items:baseline; gap:12px; border-top:2px solid var(--page-ink); padding-top:10px; }
+  .vhead .tag{ font-family:ui-monospace,monospace; font-weight:700; font-size:1.05rem; color:var(--acc); }
+  .vhead h2{ margin:0; font-size:1.25rem; }
+  .vwhy{ color:var(--page-muted); max-width:70ch; margin:0; }
+  .frame{ border:1px solid var(--page-line); border-radius:10px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.10); }
+  .frame > .mock{ overflow-x:auto; }
+  table{ border-collapse:collapse; }
+
+  /* ---------- wspólna baza C (metro) ---------- */
+  .vc{ background:#ffffff; color:#111; padding:0 0 30px; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; }
+  .vc .signbar{ background:#111; color:#fff; padding:14px 22px; display:flex; align-items:center; gap:12px; }
+  .vc .bullet{ width:30px; height:30px; border-radius:50%; background:#fccc0a; color:#111; display:inline-flex;
+               align-items:center; justify-content:center; font-weight:700; flex:none; }
+  .vc .signbar h3{ margin:0; font-size:1.05rem; font-weight:700; }
+  .vc .signbar small{ margin-left:auto; font-size:.72rem; color:#9aa; }
+  .vc .signbar small b{ color:#7ed488; font-weight:600; }
+  .vc .inner{ max-width:620px; margin:0 auto; padding:22px 22px 0; }
+  .vc .ask{ display:flex; border:2px solid #111; }
+  .vc .ask input{ flex:1; border:0; padding:12px 14px; font-size:1rem; font-family:inherit; }
+  .vc .ask button{ border:0; background:#fccc0a; color:#111; font-weight:700; padding:12px 20px; }
+  .vc .result{ border:2px solid #111; margin-top:22px; }
+  .vc .result .rhead{ background:#111; color:#fff; padding:8px 14px; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; }
+  .vc .result .rbody{ padding:16px 18px; }
+  .vc .ans{ font-size:1.3rem; margin:0 0 12px; line-height:1.4; }
+  .vc .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .vc .chip{ border:1.5px solid #111; border-radius:999px; padding:2px 12px; font-size:.75rem; font-weight:700; }
+  .vc .chip.y{ background:#fccc0a; border-color:#fccc0a; }
+  .vc details summary{ cursor:pointer; font-size:.8rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+  .vc pre{ background:#f4f4f4; padding:12px; overflow-x:auto; font:.8rem/1.5 ui-monospace,monospace; }
+  .vc table{ width:100%; font-size:.85rem; margin-top:8px; font-variant-numeric:tabular-nums; }
+  .vc th{ text-align:left; background:#111; color:#fff; padding:5px 8px; font-size:.75rem; letter-spacing:.08em; }
+  .vc td{ padding:6px 8px; border-bottom:1px solid #ddd; font-family:ui-monospace,monospace; }
+  .ok-green{ color:#00933c; }
+
+  /* ---------- C1: zielone stacje + status OK po prawej ---------- */
+  .c1 .line{ margin:26px 0 6px; padding-left:34px; position:relative; display:flex; flex-direction:column; gap:15px; }
+  .c1 .line::before{ content:""; position:absolute; left:10px; top:4px; bottom:4px; width:8px; background:#fccc0a; border-radius:4px; }
+  .c1 .station{ position:relative; font-size:.95rem; display:flex; align-items:baseline; gap:8px; }
+  .c1 .station::before{ content:""; position:absolute; left:-30px; top:.28em; width:12px; height:12px; border-radius:50%;
+                        background:#00933c; border:3px solid #00933c; }
+  .c1 .station.err::before{ background:#d0021b; border-color:#d0021b; }
+  .c1 .station .dots{ flex:1; border-bottom:1px dotted #bbb; transform:translateY(-4px); }
+  .c1 .station .st{ font:.75rem ui-monospace,monospace; font-weight:700; color:#00933c; letter-spacing:.08em; }
+  .c1 .station.err .st{ color:#d0021b; }
+  .c1 .station .why{ position:absolute; top:1.35em; left:0; font-size:.78rem; color:#d0021b; }
+  .c1 .station.err{ margin-bottom:16px; }
+  .c1 .station .sub{ font-size:.78rem; color:#777; }
+
+  /* ---------- C2: bullety-znaczniki jak oznaczenia linii ---------- */
+  .c2 .line{ margin:26px 0 6px; display:flex; flex-direction:column; gap:12px; }
+  .c2 .station{ display:flex; align-items:flex-start; gap:12px; font-size:.95rem; }
+  .c2 .sbullet{ width:24px; height:24px; border-radius:50%; flex:none; display:inline-flex; align-items:center;
+                justify-content:center; font-weight:700; font-size:.8rem; background:#00933c; color:#fff; }
+  .c2 .station.err .sbullet{ background:#d0021b; }
+  .c2 .station.next .sbullet{ background:#fff; color:#999; border:2px dashed #bbb; }
+  .c2 .stxt .lbl{ display:block; }
+  .c2 .stxt .why{ display:block; font-size:.78rem; color:#d0021b; }
+  .c2 .stxt .sub{ display:block; font-size:.78rem; color:#777; }
+
+  /* ---------- C3: segmentowana linia postępu ---------- */
+  .c3 .line{ margin:26px 0 6px; padding-left:38px; position:relative; display:flex; flex-direction:column; gap:15px; }
+  .c3 .seg{ position:absolute; left:12px; width:8px; border-radius:4px; }
+  .c3 .station{ position:relative; font-size:.95rem; }
+  .c3 .station::before{ content:""; position:absolute; left:-34px; top:.22em; width:16px; height:16px; border-radius:50%;
+                        background:#00933c; box-shadow:inset 0 0 0 3px #fff, 0 0 0 2px #00933c; }
+  .c3 .station.err::before{ background:#d0021b; box-shadow:inset 0 0 0 3px #fff, 0 0 0 2px #d0021b; }
+  .c3 .station .badge{ display:inline-block; margin-left:8px; font:.68rem ui-monospace,monospace; font-weight:700;
+                       padding:1px 8px; border-radius:3px; background:#e7f4ea; color:#00933c; letter-spacing:.06em; }
+  .c3 .station.err .badge{ background:#fdeaea; color:#d0021b; }
+  .c3 .station .why{ display:block; font-size:.78rem; color:#d0021b; }
+  .c3 .station .sub{ display:block; font-size:.78rem; color:#777; }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>Wariant C („Linia M") — trzy wersje zielonych statusów etapów</h1>
+    <p>Baza bez zmian: czarny pasek stacji, żółty bullet „M", karta wyniku, chipy. Różni się
+       wyłącznie oś czasu — forma zielonych wskaźników OK i czerwonego odrzucenia.</p>
+    <p>Odpisz w czacie: <span class="kbd">C1</span>, <span class="kbd">C2</span> albo
+       <span class="kbd">C3</span> (+ ewentualne uwagi).</p>
+  </header>
+
+  <!-- ============ C1 ============ -->
+  <section class="variant">
+    <div class="vhead"><span class="tag">C1</span><h2>Zielone stacje + „OK" przy liderze</h2></div>
+    <p class="vwhy">Żółta linia trasy zostaje (tożsamość metra), ale kółka stacji są pełne, zielone;
+       po prawej status w monospace (OK / ODRZUCONE) połączony kropkowanym liderem — czytelność listy
+       kontrolnej, jak w wariancie A.</p>
+    <div class="frame"><div class="mock vc c1">
+      <div class="signbar"><span class="bullet">M</span><h3>Chat with data — NYC Taxi</h3>
+        <small>Ollama <b>OK</b> · BigQuery <b>OK</b> · Indeks <b>OK</b></small></div>
+      <div class="inner">
+        <div class="ask"><input value="Jaki był średni napiwek przy płatności kartą?" readonly><button>Zapytaj</button></div>
+        <div class="line">
+          <div class="station"><span>Kontekst schematu <span class="sub">RAG · Chroma</span></span><span class="dots"></span><span class="st">OK</span></div>
+          <div class="station"><span>SQL — próba 1</span><span class="dots"></span><span class="st">OK</span></div>
+          <div class="station err"><span>Guardraile</span><span class="dots"></span><span class="st">ODRZUCONE</span>
+            <span class="why">Tabela raw.trips jest poza dozwolonymi zbiorami danych</span></div>
+          <div class="station"><span>SQL — próba 2</span><span class="dots"></span><span class="st">OK</span></div>
+          <div class="station"><span>Guardraile <span class="sub">dry-run 0.05 GB</span></span><span class="dots"></span><span class="st">OK</span></div>
+          <div class="station"><span>BigQuery — wykonanie</span><span class="dots"></span><span class="st">OK</span></div>
+          <div class="station"><span>Odpowiedź</span><span class="dots"></span><span class="st">OK</span></div>
+        </div>
+        <div class="result">
+          <div class="rhead">Wynik kursu</div>
+          <div class="rbody">
+            <p class="ans">Średni napiwek przy płatności kartą wynosił <b>4,16 USD</b>.</p>
+            <div class="chips"><span class="chip y">2 próby</span><span class="chip">0.0480 GB</span><span class="chip">gemma4</span></div>
+            <details open><summary>Użyty SQL</summary>
+              <pre>SELECT ROUND(AVG(f.tip_amount), 2) AS avg_tip
+FROM `taxi-chat-data.marts.fct_trips` f
+JOIN `taxi-chat-data.marts.dim_payment` p
+  ON f.payment_type = p.payment_type
+WHERE p.payment_desc = 'Credit card'
+LIMIT 100</pre></details>
+            <table><tr><th>AVG_TIP</th></tr><tr><td>4.16</td></tr></table>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ============ C2 ============ -->
+  <section class="variant">
+    <div class="vhead"><span class="tag">C2</span><h2>Bullety-znaczniki (✓ / ✕) jak oznaczenia linii</h2></div>
+    <p class="vwhy">Bez ciągłej linii — każdy etap to okrągły bullet w stylu oznaczeń linii metra:
+       zielony ✓ dla OK, czerwony ✕ dla odrzucenia, szary przerywany dla etapów przyszłych (tu:
+       wszystkie zakończone). Najbardziej „komponentowa" forma — bullet to jeden mały komponent.</p>
+    <div class="frame"><div class="mock vc c2">
+      <div class="signbar"><span class="bullet">M</span><h3>Chat with data — NYC Taxi</h3>
+        <small>Ollama <b>OK</b> · BigQuery <b>OK</b> · Indeks <b>OK</b></small></div>
+      <div class="inner">
+        <div class="ask"><input value="Jaki był średni napiwek przy płatności kartą?" readonly><button>Zapytaj</button></div>
+        <div class="line">
+          <div class="station"><span class="sbullet">✓</span><span class="stxt"><span class="lbl">Kontekst schematu</span><span class="sub">RAG · Chroma</span></span></div>
+          <div class="station"><span class="sbullet">✓</span><span class="stxt"><span class="lbl">SQL — próba 1</span><span class="sub">gemma4</span></span></div>
+          <div class="station err"><span class="sbullet">✕</span><span class="stxt"><span class="lbl">Guardraile: odrzucone</span>
+            <span class="why">Tabela raw.trips jest poza dozwolonymi zbiorami danych</span></span></div>
+          <div class="station"><span class="sbullet">✓</span><span class="stxt"><span class="lbl">SQL — próba 2</span></span></div>
+          <div class="station"><span class="sbullet">✓</span><span class="stxt"><span class="lbl">Guardraile: zaakceptowane</span><span class="sub">dry-run 0.05 GB</span></span></div>
+          <div class="station"><span class="sbullet">✓</span><span class="stxt"><span class="lbl">BigQuery — wykonanie</span></span></div>
+          <div class="station"><span class="sbullet">✓</span><span class="stxt"><span class="lbl">Odpowiedź</span></span></div>
+        </div>
+        <div class="result">
+          <div class="rhead">Wynik kursu</div>
+          <div class="rbody">
+            <p class="ans">Średni napiwek przy płatności kartą wynosił <b>4,16 USD</b>.</p>
+            <div class="chips"><span class="chip y">2 próby</span><span class="chip">0.0480 GB</span><span class="chip">gemma4</span></div>
+            <details open><summary>Użyty SQL</summary>
+              <pre>SELECT ROUND(AVG(f.tip_amount), 2) AS avg_tip
+FROM `taxi-chat-data.marts.fct_trips` f
+JOIN `taxi-chat-data.marts.dim_payment` p
+  ON f.payment_type = p.payment_type
+WHERE p.payment_desc = 'Credit card'
+LIMIT 100</pre></details>
+            <table><tr><th>AVG_TIP</th></tr><tr><td>4.16</td></tr></table>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ============ C3 ============ -->
+  <section class="variant">
+    <div class="vhead"><span class="tag">C3</span><h2>Zielona linia postępu + plakietki statusu</h2></div>
+    <p class="vwhy">Linia trasy sama koloruje się na zielono w miarę postępu (żółty zostaje tylko w
+       brandingu), stacje to zielone pierścienie, a status siedzi w małej plakietce przy nazwie etapu.
+       Czerwony segment linii wokół odrzuconej stacji. Najbardziej „live" wizualnie podczas streamu.</p>
+    <div class="frame"><div class="mock vc c3">
+      <div class="signbar"><span class="bullet">M</span><h3>Chat with data — NYC Taxi</h3>
+        <small>Ollama <b>OK</b> · BigQuery <b>OK</b> · Indeks <b>OK</b></small></div>
+      <div class="inner">
+        <div class="ask"><input value="Jaki był średni napiwek przy płatności kartą?" readonly><button>Zapytaj</button></div>
+        <div class="line">
+          <span class="seg" style="top:4px;height:56px;background:#00933c"></span>
+          <span class="seg" style="top:60px;height:52px;background:#d0021b"></span>
+          <span class="seg" style="top:112px;bottom:4px;background:#00933c"></span>
+          <div class="station">Kontekst schematu<span class="badge">OK</span><span class="sub">RAG · Chroma</span></div>
+          <div class="station">SQL — próba 1<span class="badge">OK</span></div>
+          <div class="station err">Guardraile<span class="badge">ODRZUCONE</span>
+            <span class="why">Tabela raw.trips jest poza dozwolonymi zbiorami danych</span></div>
+          <div class="station">SQL — próba 2<span class="badge">OK</span></div>
+          <div class="station">Guardraile<span class="badge">OK</span><span class="sub">dry-run 0.05 GB</span></div>
+          <div class="station">BigQuery — wykonanie<span class="badge">OK</span></div>
+          <div class="station">Odpowiedź<span class="badge">OK</span></div>
+        </div>
+        <div class="result">
+          <div class="rhead">Wynik kursu</div>
+          <div class="rbody">
+            <p class="ans">Średni napiwek przy płatności kartą wynosił <b>4,16 USD</b>.</p>
+            <div class="chips"><span class="chip y">2 próby</span><span class="chip">0.0480 GB</span><span class="chip">gemma4</span></div>
+            <details open><summary>Użyty SQL</summary>
+              <pre>SELECT ROUND(AVG(f.tip_amount), 2) AS avg_tip
+FROM `taxi-chat-data.marts.fct_trips` f
+JOIN `taxi-chat-data.marts.dim_payment` p
+  ON f.payment_type = p.payment_type
+WHERE p.payment_desc = 'Credit card'
+LIMIT 100</pre></details>
+            <table><tr><th>AVG_TIP</th></tr><tr><td>4.16</td></tr></table>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+</div>
