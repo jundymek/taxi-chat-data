@@ -33,10 +33,12 @@ live docker-compose run.
   proven Faza 2 pattern; the container authenticates as the operator, no
   service-account key files created.
 - **Each task copies the mounted dbt project into a writable temp dir**
-  (`mktemp -d`) before running dbt. The bind-mounted `dbt/` is host-owned and
-  not writable by the in-container `airflow` user on Linux; `dbt deps` must
-  write `dbt_packages/`. Copying makes the DAG portable across macOS and Linux
-  hosts (Codex P1).
+  (`mktemp -d`) before running dbt, and removes it with a `trap … EXIT` when the
+  task finishes (success or failure) so repeated runs don't leak `/tmp` in the
+  long-lived container. The bind-mounted `dbt/` is host-owned and not writable by
+  the in-container `airflow` user on Linux; `dbt deps` must write `dbt_packages/`.
+  Copying makes the DAG portable across macOS and Linux hosts (Codex P1, plus the
+  cleanup for a later P2).
 - **`dbt_run` runs `dbt deps && dbt seed && dbt run`** (still one task). The
   marts dims (`dim_location`/`dim_payment`/`dim_ratecode`) `ref()` the seed
   lookup tables, so seeding first makes the DAG self-contained even on a fresh

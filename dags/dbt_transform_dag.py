@@ -32,9 +32,13 @@ def _dbt_command(*dbt_subcommands: str) -> str:
     steps = " && ".join(
         f"dbt {cmd} --profiles-dir \"$WORK\"" for cmd in dbt_subcommands
     )
+    # `trap ... EXIT` removes the temp copy whether the task succeeds or fails,
+    # so repeated runs in the long-lived container don't leak /tmp. It fires on
+    # EXIT without changing the script's exit code, so Airflow still sees the
+    # real dbt result.
     return (
-        f"set -e && WORK=$(mktemp -d) && cp -a {DBT_DIR}/. \"$WORK\"/ "
-        f"&& cd \"$WORK\" && dbt deps && {steps}"
+        f"set -e && WORK=$(mktemp -d) && trap 'rm -rf \"$WORK\"' EXIT "
+        f"&& cp -a {DBT_DIR}/. \"$WORK\"/ && cd \"$WORK\" && dbt deps && {steps}"
     )
 
 
