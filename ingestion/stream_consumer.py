@@ -60,7 +60,16 @@ class BatchWriter:
         rows, messages = self._rows, self._messages
         self._rows, self._messages = [], []
         row_ids = [row["trip_key"] for row in rows]
-        errors = self._bq.insert_rows_json(self._table_id, rows, row_ids=row_ids)
+        try:
+            errors = self._bq.insert_rows_json(self._table_id, rows, row_ids=row_ids)
+        except Exception as exc:  # noqa: BLE001 — transient RPC/client error
+            # BigQuery raised instead of returning row-level errors (network,
+            # auth, quota). Nack the whole batch and keep the consumer alive:
+            # Pub/Sub redelivers, insertId (trip_key) de-dups what landed.
+            print(f"[consumer] insert raised ({exc!r}) — nacking batch of {len(rows)}")
+            for message in messages:
+                message.nack()
+            return
         if errors:
             print(f"[consumer] insert errors ({len(errors)}) — nacking batch of {len(rows)}")
             for message in messages:

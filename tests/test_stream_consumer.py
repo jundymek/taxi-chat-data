@@ -41,6 +41,18 @@ class FakeBQ:
         return self.errors
 
 
+class RaisingBQ:
+    """insert_rows_json raises (transient RPC/auth/network error) instead of
+    returning row-level errors."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def insert_rows_json(self, table_id, rows, row_ids=None):
+        self.calls += 1
+        raise RuntimeError("transient RPC error")
+
+
 def test_flushes_when_batch_size_reached_acks_and_uses_trip_key_as_insert_id():
     bq = FakeBQ()
     writer = BatchWriter(bq, "p.stream.trips", batch_size=2)
@@ -62,6 +74,18 @@ def test_insert_errors_nack_the_whole_batch():
     writer.add(msg)
     assert msg.nacked and not msg.acked
     assert writer.inserted == 0
+
+
+def test_insert_exception_nacks_batch_and_does_not_propagate():
+    # A raised insert (not a returned error list) must still nack the batch and
+    # keep the consumer alive — advertised at-least-once semantics.
+    bq = RaisingBQ()
+    writer = BatchWriter(bq, "p.stream.trips", batch_size=1)
+    msg = FakeMessage(row_to_message(ROW))
+    writer.add(msg)  # must not raise
+    assert msg.nacked and not msg.acked
+    assert writer.inserted == 0
+    assert bq.calls == 1
 
 
 def test_malformed_message_is_acked_and_counted_rejected():
