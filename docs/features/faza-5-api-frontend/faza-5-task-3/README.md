@@ -54,3 +54,29 @@ mount of `frontend/dist` (added in Task 1) actually has a build to serve.
 - `pnpm run build` → clean (`dist/index.html` + hashed assets).
 - Live `/health` on `:8000` → `{"ollama":"ok","bigquery":"ok","chroma_index":"ok"}`.
 - Live `/chat` SSE → all three demo paths above, captured verbatim.
+
+## UI fixes before merge (operator review + live user testing)
+Live-demo review and hands-on user testing surfaced UI issues, all fixed
+front-only (no `genai/`/`api/` changes) per
+`docs/superpowers/specs/2026-07-18-faza-5-timeline-ui-fixes-design.md`:
+1. Metro timeline line drifted under a wrapped rejection reason. First attempt
+   (per-row line segments) regressed — segment height was content-dependent and
+   drifted vertically on unequal row heights. Root-caused via
+   systematic-debugging and fixed properly: one continuous `.timeline::before`
+   with its centre aligned to the dot centre (both at 10px).
+2. No between-stage loader → pulsing pending station showing the next-stage
+   label (`nextStageLabel`); keyframe named `station-pulse` to avoid colliding
+   with Tailwind's own `@keyframes pulse`; respects `prefers-reduced-motion`.
+3. Raw BigQuery dry-run rejection (URL + Job ID) → `cleanReason` keeps the
+   substance, drops the noise; still an `ODRZUCONE` guardrail row.
+4. `f0_` table header → `columnLabel` renders "Wynik"/"Wynik N".
+5. `0.0480 GB` chip → `formatScan` → "Przeskanowano 0.05 GB" (`<0.01 GB` for
+   tiny scans).
+6. A wide `SELECT *` result table broke the card border → wrapped in
+   `overflow-x-auto` (+ `whitespace-nowrap`) so it scrolls inside the card.
+
+Verified live with Playwright against the running dev server (real gemma4 +
+BigQuery): all 7 timeline dots centred on the line (0.0px off) including the
+wrapped-reason row; the pending dot on the line with label "Generowanie SQL" and
+an active pulse; a 16-column `SELECT *` table (scrollWidth 2059px) clipped inside
+the card. Suites: `pnpm test` 26/26 green; `pnpm run build` clean.

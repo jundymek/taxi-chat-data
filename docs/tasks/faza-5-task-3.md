@@ -44,8 +44,19 @@ Operator session, claude-opus-4-8[1m].
     prose (no destructive SQL); renders as a result card.
 - Suites: `.venv/bin/pytest` → 85 passed, 5 deselected; `frontend` `pnpm test`
   → 15 passed (6 files). `pnpm run build` clean.
+- Post-review UI fixes (front-only) landed before merge: timeline alignment,
+  pulsing between-stage loader, cleaned dry-run rejection reason, `f0_` → "Wynik"
+  column labels, labelled scan chip, and a scrollable wide `SELECT *` table. The
+  first timeline-alignment attempt regressed (per-row segments drifted); root-
+  caused via systematic-debugging and fixed with a single continuous line, then
+  verified live with Playwright (all dots on the line 0.0px off; 16-col table
+  clipped inside the card). Frontend suite grew to 26/26. Spec:
+  `docs/superpowers/specs/2026-07-18-faza-5-timeline-ui-fixes-design.md`; plan:
+  `docs/superpowers/plans/2026-07-18-faza-5-timeline-ui-fixes.md`.
 
 ### File List
 - `README.md` (UPDATE) — Faza 5 checkbox + "Chat UI (Faza 5)" section.
 - `docs/features/faza-5-api-frontend/faza-5-task-3/README.md` (NEW) — feature record.
 - `docs/tasks/faza-5-task-3.md` (UPDATE) — this story close-out.
+- UI fixes: `frontend/src/components/StageTimeline.tsx`, `ResultCard.tsx`,
+  `frontend/src/app/styles.css` + `__tests__` (UPDATE) — timeline/loader/result polish.
