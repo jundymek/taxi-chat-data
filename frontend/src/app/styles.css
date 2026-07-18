@@ -48,6 +48,7 @@ body {
   position: relative;
   font-size: 0.95rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
 }
@@ -65,9 +66,6 @@ body {
 .station.err::before {
   background: var(--color-err);
   border-color: var(--color-err);
-}
-.station.err {
-  margin-bottom: 16px;
 }
 .station.pending::before {
   background: #fff;
@@ -89,9 +87,11 @@ body {
   color: var(--color-err);
 }
 .station .why {
-  position: absolute;
-  top: 1.35em;
-  left: 0;
+  /* Full-width so a multi-line guardrail reason flows below the row and pushes
+     the next station down (mockup used absolute positioning, which overlapped
+     the next station when the reason wrapped). */
+  flex-basis: 100%;
+  margin-top: 2px;
   font-size: 0.78rem;
   color: var(--color-err);
 }

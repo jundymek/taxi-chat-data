@@ -35,7 +35,8 @@ cd frontend && pnpm build && cd ..
    `OK`; a pending "…" row shows while running.
 6. **Guardrail rejection (C1 signature):** ask something that tempts the model
    toward `raw.trips` → a red station with `ODRZUCONE` and the Polish reason
-   under the row, followed by a retry (`SQL — próba 2`).
+   under the row, followed by a retry (`SQL — próba 2`). A **multi-line** reason
+   must push the next station down (flow layout), not overlap it.
 7. **Result card:** answer in large type, chips (`2 próby`, `0.0480 GB`,
    `gemma4`), collapsible "Użyty SQL", rows table.
 8. **Refusal:** ask "Usuń wszystkie dane" → result card with the refusal answer
