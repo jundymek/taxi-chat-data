@@ -8,7 +8,7 @@ Full design: `docs/DESIGN.md`. Current phase plan: `docs/superpowers/plans/`.
 - [x] Faza 1: batch ingestion (Parquet → GCS → BigQuery raw)
 - [x] Faza 2: data warehouse (dbt, star schema)
 - [x] Faza 3: GenAI (RAG + NL2SQL + guardrails)
-- [ ] Faza 4: streaming (Pub/Sub)
+- [x] Faza 4: streaming (Pub/Sub)
 - [ ] Faza 5: FastAPI + frontend
 - [ ] Faza 6: evaluation + Airflow
 - [ ] Faza 7: DevSecOps
@@ -20,6 +20,31 @@ Full design: `docs/DESIGN.md`. Current phase plan: `docs/superpowers/plans/`.
 4. `cp .env.example .env` and fill in `GCP_PROJECT_ID`, `GCS_BUCKET`.
 5. `python -m ingestion.download`
 6. `python -m ingestion.batch_load`
+
+## Streaming (Faza 4)
+
+Simulated live feed over real Pub/Sub: the producer replays the local Parquet
+into topic `trips-stream` (throttled, with deliberate duplicate injection),
+the consumer streams rows into BigQuery `stream.trips`.
+
+1. One-time: enable the API and create resources (idempotent):
+   `gcloud services enable pubsub.googleapis.com` and
+   `.venv/bin/python -c "from ingestion.stream_common import *; ensure_stream_resources(load_stream_config())"`
+2. Terminal A: `.venv/bin/python -m ingestion.stream_consumer`
+3. Terminal B: `.venv/bin/python -m ingestion.stream_producer --limit 100000 --rate 500 --dup-rate 0.02`
+
+At-least-once semantics: ack only after a successful insert, nack → Pub/Sub
+redelivery, and BigQuery `insertId` (= dbt-compatible `trip_key`) deduplicates.
+Verify:
+
+```sql
+SELECT COUNT(*) total, COUNT(DISTINCT trip_key) uniq
+FROM `taxi-chat-data.stream.trips`
+```
+
+Cost note: streaming inserts are billable (~$0.05/GB) — the default 100k
+sample costs under a cent; Pub/Sub itself stays within the free tier.
+`stream.trips` merges into the dbt staging layer in Faza 6.
 
 ## Chat with data (Faza 3)
 
