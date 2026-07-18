@@ -42,6 +42,17 @@ validated by an import-only structure test — no live scheduler needed.
   `.venv-airflow/bin/python -m pytest tests/test_dbt_transform_dag.py -v`.
 - Full mainline suite: `85 passed, 1 skipped, 5 deselected` —
   `.venv/bin/pytest -q` (the DAG test skips because airflow is absent there).
-- Live docker-compose run (`docker compose -f docker-compose.airflow.yml up`,
-  trigger `dbt_transform`): both `dbt_run` and `dbt_test` green — see PR
-  (executed after the upstream `stg_trips` merge from faza-6-task-1).
+- Live docker-compose run (`-p taxi_pamela_airflow`, run
+  `manual__2026-07-18T21:05:44+00:00`, after merging faza-6-task-1's
+  `stg_trips`): DAG **success**, both tasks green:
+  - `dbt_run` (46s) — `Done. PASS=6 WARN=0 ERROR=0` (5 tables + `stg_trips`
+    view; `fct_trips` = 3.0m rows), reaching BigQuery via the mounted ADC.
+  - `dbt_test` (52s) — `Done. PASS=25 WARN=0 ERROR=0`, including
+    `unique_stg_trips_trip_key` (proves the raw+stream dedup from task-1).
+
+## Notes
+- The `dbt_run` task runs `dbt deps && dbt run`: the project depends on
+  `dbt_utils` (via `packages.yml`), but `dbt_packages/` is gitignored and empty
+  in a fresh container, so `dbt deps` must run first. Folded into `dbt_run` to
+  keep the DAG at exactly two tasks (per AC #1). `DBT_LOG_PATH`/`DBT_TARGET_PATH`
+  point at `/tmp` so dbt artifacts write to a container-writable path.

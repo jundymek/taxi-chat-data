@@ -26,7 +26,12 @@ with DAG(
 ) as dag:
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command=f"cd {DBT_DIR} && dbt run --profiles-dir {DBT_DIR}",
+        # `dbt deps` first: the project depends on dbt_utils (packages.yml) but
+        # dbt_packages/ is gitignored and empty in a fresh container. Folded into
+        # this task to keep the DAG at exactly two steps (run, then test).
+        bash_command=(
+            f"cd {DBT_DIR} && dbt deps && dbt run --profiles-dir {DBT_DIR}"
+        ),
     )
     dbt_test = BashOperator(
         task_id="dbt_test",
