@@ -43,7 +43,7 @@ Spec: `docs/superpowers/specs/2026-07-18-faza-6-eval-airflow-stream-merge-design
 - [x] Structure test green
 - [x] Live docker compose run → trigger DAG → both tasks green
 - [x] Polish note + feature record + this story close-out
-- [ ] PR (in progress — pre-PR checkpoint)
+- [x] PR — https://github.com/jundymek/taxi-chat-data/pull/16
 
 ## Notes
 - Deliberately single-purpose (dbt run+test), manually triggered — not a
