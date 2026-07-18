@@ -61,31 +61,38 @@ export function ResultCard({ result }: ResultCardProps) {
           </details>
         ) : null}
         {columns.length ? (
-          <table className="mt-2 w-full border-collapse text-[0.85rem] [font-variant-numeric:tabular-nums]">
-            <thead>
-              <tr>
-                {columns.map((c) => (
-                  <th
-                    key={c}
-                    className="bg-ink px-2 py-[5px] text-left text-[0.75rem] tracking-[0.08em] text-white"
-                  >
-                    {columnLabel(c, columns)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {result.rows.slice(0, 50).map((row, i) => (
-                <tr key={i}>
+          // A wide SELECT * (many columns) must scroll inside the card, not
+          // overflow and break its border — same pattern as the SQL <pre> above.
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full border-collapse text-[0.85rem] [font-variant-numeric:tabular-nums]">
+              <thead>
+                <tr>
                   {columns.map((c) => (
-                    <td key={c} className="border-b border-[#ddd] px-2 py-1.5 font-mono">
-                      {String(row[c])}
-                    </td>
+                    <th
+                      key={c}
+                      className="whitespace-nowrap bg-ink px-2 py-[5px] text-left text-[0.75rem] tracking-[0.08em] text-white"
+                    >
+                      {columnLabel(c, columns)}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {result.rows.slice(0, 50).map((row, i) => (
+                  <tr key={i}>
+                    {columns.map((c) => (
+                      <td
+                        key={c}
+                        className="whitespace-nowrap border-b border-[#ddd] px-2 py-1.5 font-mono"
+                      >
+                        {String(row[c])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </div>
     </section>

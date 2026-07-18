@@ -23,9 +23,9 @@ body {
 }
 
 /* ---- C1 metro stage-timeline (custom layer) ----
-   Per-row geometry: each station draws its own vertical line segment (::after)
-   and its dot (::before) anchored to the FIRST line of the label, so a wrapped
-   rejection reason grows the row without drifting the continuous line. */
+   One continuous route line (`.timeline::before`) with the dots centred on it.
+   A wrapped rejection reason is a full-width `.why` that flows BELOW its row, so
+   it grows the row height without ever moving a dot off the line. */
 .timeline {
   list-style: none;
   margin: 26px 0 6px;
@@ -35,6 +35,19 @@ body {
   flex-direction: column;
   gap: 15px;
 }
+/* Continuous yellow line. Its centre sits at 6 + 8/2 = 10px from .timeline's
+   left edge — the same X as each dot's centre (34 padding − 30 + 12/2 = 10px) —
+   so dots ride exactly on the line. */
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  bottom: 4px;
+  width: 8px;
+  background: var(--color-line);
+  border-radius: 4px;
+}
 .station {
   position: relative;
   font-size: 0.95rem;
@@ -43,22 +56,8 @@ body {
   align-items: baseline;
   gap: 8px;
 }
-/* Vertical yellow line segment for this row: spans the full row height plus the
-   gap to the next station, so adjacent segments meet into one continuous line. */
-.station::after {
-  content: "";
-  position: absolute;
-  left: -24px;
-  top: 0;
-  height: calc(100% + 15px); /* row + .timeline gap */
-  width: 8px;
-  background: var(--color-line);
-  border-radius: 4px;
-}
-.station:last-child::after {
-  height: 100%; /* no gap below the last station */
-}
-/* Green station dot, anchored to the first label line (not the grown row). */
+/* Green station dot, centred on the continuous line, anchored to the first
+   label line so a grown row never drifts it. */
 .station::before {
   content: "";
   position: absolute;
@@ -102,14 +101,16 @@ body {
   font-size: 0.78rem;
   color: var(--color-err);
 }
-/* Pulsing pending station: the dot breathes while the next stage runs. */
+/* Pulsing pending station: the dot breathes while the next stage runs.
+   Named `station-pulse` (not `pulse`) to avoid colliding with Tailwind's own
+   `@keyframes pulse`. */
 .station.pending::before {
-  animation: pulse 1.1s ease-in-out infinite;
+  animation: station-pulse 1.1s ease-in-out infinite;
 }
 .station.pending .lbl {
   color: #888;
 }
-@keyframes pulse {
+@keyframes station-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.8); }
 }
