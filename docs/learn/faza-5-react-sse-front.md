@@ -109,9 +109,9 @@ vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(EV(...), EV(...))))
 
 Hook renderujemy przez `renderHook`, wołamy `ask()` w `act`, a asercje czekają
 przez `waitFor`, aż stan się ustabilizuje. Parser i komponenty testujemy wprost
-(stringi / propsy). Razem: 13 testów (parser 4, chatClient 2, hook 3,
-StageTimeline 2, ResultCard 2) — zielone bez dotykania sieci, Ollamy czy
-BigQuery.
+(stringi / propsy). Razem: 15 testów (parser 4, chatClient 2, hook 3,
+QuestionForm 2, StageTimeline 2, ResultCard 2) — zielone bez dotykania sieci,
+Ollamy czy BigQuery.
 
 ### Pułapka: „przeterminowane" żądanie i strażnik `isCurrent`
 

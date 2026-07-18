@@ -13,7 +13,9 @@ export function QuestionForm({ disabled, onAsk }: QuestionFormProps) {
       className="flex border-2 border-ink"
       onSubmit={(e) => {
         e.preventDefault();
-        if (question.trim()) onAsk(question.trim());
+        // Guard on `disabled` too: otherwise Enter in the field resubmits and
+        // aborts an in-flight request even though the button is disabled.
+        if (!disabled && question.trim()) onAsk(question.trim());
       }}
     >
       <input

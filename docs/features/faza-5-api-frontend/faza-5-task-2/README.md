@@ -56,13 +56,15 @@ Full log in `DECISIONS.md` (worktree). Highlights (operator-flagged):
   `refused:true`, not `error`) before any code.
 
 ## Verification
-- `cd frontend && pnpm test` → **13 passed** (parser 4, chatClient 2, hook 3,
-  StageTimeline 2, ResultCard 2); no live services touched (fetch stubbed,
-  streams faked).
-- Codex review (base `feat/faza-5-api-frontend`): 2 findings, both fixed —
-  (P1) superseded-request race in `useChatStream` (guard all state mutations on
-  the current controller; regression test added); (P2) `TextDecoder` not flushed
-  at EOF in `chatClient` (flush on `done`; multibyte regression test added).
+- `cd frontend && pnpm test` → **15 passed** (parser 4, chatClient 2, hook 3,
+  QuestionForm 2, StageTimeline 2, ResultCard 2); no live services touched
+  (fetch stubbed, streams faked).
+- Codex review (base `feat/faza-5-api-frontend`), 3 findings across two rounds,
+  all fixed with regression tests: (P1) superseded-request race in
+  `useChatStream` (guard state mutations on the current controller); (P2)
+  `TextDecoder` not flushed at EOF in `chatClient` (flush on `done`); (P2)
+  `QuestionForm` submit ignored `disabled`, letting Enter restart an in-flight
+  request (guard `onSubmit` on `disabled`).
 - `cd frontend && pnpm build` → clean (`tsc -b && vite build`; CSS ~9.8 kB
   gzip 3 kB, JS ~196 kB gzip 62 kB).
 - Full end-to-end through the running API (streaming timeline, guardrail

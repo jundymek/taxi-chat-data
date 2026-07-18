@@ -62,13 +62,14 @@ claude-opus-4-8[1m] (Claude Opus 4.8, 1M context), autonomous mode.
   `done` XOR `error`; guardrail refusal = `done` with `refused:true`, not
   `error`; nulls omitted on the wire). `types.ts` mirrors `api/schemas.py` 1:1.
 - TDD per the plan: parser → hook → components, each with failing tests first.
-  Final suite: **13 passed** (parser 4, chatClient 2, hook 3, StageTimeline 2,
-  ResultCard 2). `pnpm build` clean.
-- Codex review (2 findings, both fixed): (P1) `useChatStream` cleared `running`
-  from a superseded request — now all state mutations are guarded on the current
-  AbortController (`isCurrent`), with a regression test; (P2) `chatClient` didn't
-  flush the `TextDecoder` at EOF, risking a truncated final frame on a split
-  multibyte char — now flushed, with a regression test.
+  Final suite: **15 passed** (parser 4, chatClient 2, hook 3, QuestionForm 2,
+  StageTimeline 2, ResultCard 2). `pnpm build` clean.
+- Codex review (3 findings across two rounds, all fixed with regression tests):
+  (P1) `useChatStream` cleared `running` from a superseded request — now all
+  state mutations are guarded on the current AbortController (`isCurrent`); (P2)
+  `chatClient` didn't flush the `TextDecoder` at EOF, risking a truncated final
+  frame on a split multibyte char — now flushed; (P2) `QuestionForm` submit
+  ignored `disabled`, so Enter could restart an in-flight request — now guarded.
 - HealthBar UX: `useHealth` now distinguishes `loading` / `ready` / `error`, so
   running the front without the API shows "Status niedostępny" rather than a
   permanent "Sprawdzam status…".
@@ -92,8 +93,8 @@ NEW (all under `frontend/`):
   `src/components/ResultCard.tsx`, `src/components/HealthBar.tsx`
 - `src/app/App.tsx`, `src/app/styles.css`
 - `src/__tests__/streamParser.test.ts`, `src/__tests__/chatClient.test.ts`,
-  `src/__tests__/useChatStream.test.tsx`, `src/__tests__/StageTimeline.test.tsx`,
-  `src/__tests__/ResultCard.test.tsx`
+  `src/__tests__/useChatStream.test.tsx`, `src/__tests__/QuestionForm.test.tsx`,
+  `src/__tests__/StageTimeline.test.tsx`, `src/__tests__/ResultCard.test.tsx`
 
 NEW (docs):
 - `docs/learn/faza-5-react-sse-front.md`
