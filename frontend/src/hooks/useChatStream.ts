@@ -27,6 +27,9 @@ export function useChatStream(): ChatStream {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    // Only the newest request may touch state; a superseded (re-asked) request
+    // must not push frames, set a result, or clear `running` out from under it.
+    const isCurrent = () => abortRef.current === controller;
     setFrames([]);
     setResult(null);
     setError(null);
@@ -34,6 +37,7 @@ export function useChatStream(): ChatStream {
     const parse = createFrameParser();
     try {
       for await (const chunk of streamChat(question, controller.signal)) {
+        if (!isCurrent()) return;
         for (const frame of parse(chunk)) {
           if (frame.stage === "done") setResult(frame.result ?? null);
           else if (frame.stage === "error") setError(frame.message ?? "Nieznany błąd");
@@ -41,11 +45,11 @@ export function useChatStream(): ChatStream {
         }
       }
     } catch (exc) {
-      if (!controller.signal.aborted) {
+      if (isCurrent()) {
         setError(exc instanceof Error ? exc.message : "Błąd połączenia.");
       }
     } finally {
-      setRunning(false);
+      if (isCurrent()) setRunning(false);
     }
   }, []);
 

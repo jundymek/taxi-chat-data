@@ -109,8 +109,24 @@ vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(EV(...), EV(...))))
 
 Hook renderujemy przez `renderHook`, wołamy `ask()` w `act`, a asercje czekają
 przez `waitFor`, aż stan się ustabilizuje. Parser i komponenty testujemy wprost
-(stringi / propsy). Razem: 10 testów (parser 4, hook 2, StageTimeline 2,
-ResultCard 2) — zielone bez dotykania sieci, Ollamy czy BigQuery.
+(stringi / propsy). Razem: 13 testów (parser 4, chatClient 2, hook 3,
+StageTimeline 2, ResultCard 2) — zielone bez dotykania sieci, Ollamy czy
+BigQuery.
+
+### Pułapka: „przeterminowane" żądanie i strażnik `isCurrent`
+
+Gdy nowe pytanie przerywa poprzednie, blok `finally` starego żądania NIE może
+wyzerować `running` ani dokładać ramek do nowego strumienia. Rozwiązanie:
+strażnik `isCurrent = () => abortRef.current === controller` — tylko najnowsze
+żądanie dotyka stanu (mutacje w pętli, `catch`, `finally`). Osobny test
+sprawdza, że porzucony pierwszy strumień nie „wycieka" swojej ramki do drugiego.
+
+### Pułapka: dekoder UTF-8 na końcu strumienia
+
+`TextDecoder.decode(bytes, { stream: true })` może buforować niekompletny znak
+wielobajtowy (np. polskie `ó` = `0xC3 0xB3`) do następnego wywołania. Na końcu
+strumienia (`done`) trzeba wywołać `decoder.decode()` bez flagi `stream`, żeby
+opróżnić bufor — inaczej ostatnia ramka może się urwać i nie sparsować.
 
 ## 6. Stack (uwaga praktyczna)
 

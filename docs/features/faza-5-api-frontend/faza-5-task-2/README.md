@@ -24,7 +24,9 @@ in the `useChatStream` hook and every component is presentational.
   `fetch`/`ReadableStream`.
 - `frontend/src/hooks/useChatStream.ts` (NEW) — owns the request lifecycle:
   frames / result / error / running, AbortController on re-ask.
-- `frontend/src/hooks/useHealth.ts` (NEW) — one-shot `/health` fetch.
+- `frontend/src/hooks/useHealth.ts` (NEW) — one-shot `/health` fetch, exposes a
+  `loading | ready | error` state so the bar shows "Status niedostępny" when the
+  API is unreachable instead of a permanent "Sprawdzam status…".
 - `frontend/src/components/{StageTimeline,QuestionForm,ResultCard,HealthBar}.tsx`
   (NEW) — presentational, each with a named `*Props` interface at file top.
 - `frontend/src/app/App.tsx` (NEW) — composition only.
@@ -54,8 +56,13 @@ Full log in `DECISIONS.md` (worktree). Highlights (operator-flagged):
   `refused:true`, not `error`) before any code.
 
 ## Verification
-- `cd frontend && pnpm test` → **10 passed** (parser 4, hook 2, StageTimeline 2,
-  ResultCard 2); no live services touched (fetch stubbed, streams faked).
+- `cd frontend && pnpm test` → **13 passed** (parser 4, chatClient 2, hook 3,
+  StageTimeline 2, ResultCard 2); no live services touched (fetch stubbed,
+  streams faked).
+- Codex review (base `feat/faza-5-api-frontend`): 2 findings, both fixed —
+  (P1) superseded-request race in `useChatStream` (guard all state mutations on
+  the current controller; regression test added); (P2) `TextDecoder` not flushed
+  at EOF in `chatClient` (flush on `done`; multibyte regression test added).
 - `cd frontend && pnpm build` → clean (`tsc -b && vite build`; CSS ~9.8 kB
   gzip 3 kB, JS ~196 kB gzip 62 kB).
 - Full end-to-end through the running API (streaming timeline, guardrail

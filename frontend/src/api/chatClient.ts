@@ -17,7 +17,14 @@ export async function* streamChat(question: string, signal?: AbortSignal) {
   const decoder = new TextDecoder();
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done) {
+      // Flush any bytes the streaming decoder is still buffering (e.g. a
+      // multibyte UTF-8 char split across the final chunks), else the last
+      // frame can be truncated.
+      const tail = decoder.decode();
+      if (tail) yield tail;
+      break;
+    }
     yield decoder.decode(value, { stream: true });
   }
 }

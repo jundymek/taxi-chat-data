@@ -6,14 +6,32 @@ export interface Health {
   chroma_index: string;
 }
 
-/** Fetches dependency status once on mount; null until the first response. */
-export function useHealth(): Health | null {
-  const [health, setHealth] = useState<Health | null>(null);
+/** Health of the /health fetch: loading → ready(payload) | error (unreachable). */
+export type HealthState =
+  | { status: "loading" }
+  | { status: "ready"; health: Health }
+  | { status: "error" };
+
+/** Fetches dependency status once on mount. Distinguishes "still loading" from
+ *  "endpoint unreachable" so the UI doesn't sit on a spinner forever. */
+export function useHealth(): HealthState {
+  const [state, setState] = useState<HealthState>({ status: "loading" });
   useEffect(() => {
+    let cancelled = false;
     fetch("/health")
-      .then((r) => r.json())
-      .then(setHealth)
-      .catch(() => setHealth(null));
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<Health>;
+      })
+      .then((health) => {
+        if (!cancelled) setState({ status: "ready", health });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
-  return health;
+  return state;
 }

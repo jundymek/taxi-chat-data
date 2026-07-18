@@ -19,7 +19,7 @@ export default function App() {
           M
         </span>
         <h1 className="m-0 text-[1.05rem] font-bold">Chat with data — NYC Taxi</h1>
-        <HealthBar health={health} />
+        <HealthBar state={health} />
       </header>
       <div className="mx-auto max-w-[620px] px-[22px] pb-[60px] pt-[22px]">
         <QuestionForm disabled={running} onAsk={ask} />
