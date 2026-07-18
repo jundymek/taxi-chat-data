@@ -142,6 +142,17 @@ def create_app(pipeline_factory=None) -> FastAPI:
         return {"ollama": _check_ollama(), "bigquery": _check_bigquery(),
                 "chroma_index": _check_chroma()}
 
+    @app.get("/eval")
+    def eval_report():
+        # Read-only: serves the last written report; never runs the heavy eval
+        # (that is the `python -m genai.eval` operator step).
+        path = config.REPO_ROOT / "docs" / "eval" / "latest.json"
+        if not path.exists():
+            return {"available": False,
+                    "message": "Brak raportu — uruchom `python -m genai.eval`."}
+        import json
+        return {"available": True, **json.loads(path.read_text(encoding="utf-8"))}
+
     dist = config.REPO_ROOT / "frontend" / "dist"
     if dist.exists():
         app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
