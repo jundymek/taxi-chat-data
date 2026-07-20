@@ -47,3 +47,15 @@ jobs:
         working-directory: dbt
       - run: dbt parse
         working-directory: dbt
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: a secret that was committed and later reverted is
+          # still leaked, and a shallow clone would not see it.
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
