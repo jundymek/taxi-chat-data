@@ -114,6 +114,7 @@ Regenerate with `python -m genai.eval`; the API also serves the latest report at
 | [api/](api/) | FastAPI app, SSE streaming contract |
 | [frontend/](frontend/) | Chat UI |
 | [dags/](dags/) | Airflow DAGs |
+| [analysis/](analysis/) | Partition/cluster scan-cost measurement |
 | [tests/](tests/) | pytest suite |
 | [docs/](docs/) | Design, specs, plans, per-phase feature docs |
 
@@ -128,7 +129,9 @@ Regenerate with `python -m genai.eval`; the API also serves the latest report at
 - [x] Faza 6 — evaluation, stream merge, Airflow
 - [x] Faza 7 — DevSecOps: CI, secret scanning, unified compose
 
-Per-phase detail lives in [docs/features/](docs/features/).
+Per-task detail for phases 3–6 lives in [docs/features/](docs/features/); the
+earlier phases are covered by their specs and plans under
+[docs/superpowers/](docs/superpowers/).
 
 ## Deliberate limitations
 
