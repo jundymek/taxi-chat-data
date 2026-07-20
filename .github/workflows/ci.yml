@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: pip install ruff
+      # `ruff format` is deliberately not a gate — see the Faza 7 design doc.
+      - run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      # pytest.ini sets `-m "not integration"`, so GCP-touching tests are
+      # excluded. No GOOGLE_* env vars here on purpose: if an unmarked test
+      # reaches for BigQuery, this job should fail and the marker gets added.
+      - run: pytest
+
+  dbt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: pip install "dbt-bigquery>=1.8,<2.0"
+      # `dbt parse` validates model SQL, ref()/source() wiring and the schema
+      # YAML without opening a BigQuery connection, so no credentials needed.
+      - run: dbt deps
+        working-directory: dbt
+      - run: dbt parse
+        working-directory: dbt
