@@ -89,6 +89,8 @@ services:
       - ~/.config/gcloud:/root/.config/gcloud:ro
       # The Chroma index the RAG retriever reads lives here. Without this mount
       # /health reports chroma_index: missing and answers come back context-free.
+      # Deliberately NOT :ro — chromadb.PersistentClient opens its SQLite store
+      # read-write even for pure queries, so a read-only mount breaks startup.
       - ./data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
