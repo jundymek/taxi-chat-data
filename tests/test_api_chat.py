@@ -143,6 +143,31 @@ def test_check_chroma_ok_only_when_both_collections_present(tmp_path, monkeypatc
     assert main._check_chroma() == "ok"
 
 
+def test_eval_endpoint_reports_absence_without_a_report(monkeypatch, tmp_path):
+    import api.main as main
+    monkeypatch.setattr(main.config, "REPO_ROOT", tmp_path)
+    client = TestClient(create_app(lambda: FakePipeline([])))
+    resp = client.get("/eval")
+    assert resp.status_code == 200
+    assert resp.json()["available"] is False
+
+
+def test_eval_endpoint_serves_the_last_report(monkeypatch, tmp_path):
+    import api.main as main
+    report = {"question_count": 2, "models": [{"model": "gemma4:latest", "correct_pct": 50.0}]}
+    eval_dir = tmp_path / "docs" / "eval"
+    eval_dir.mkdir(parents=True)
+    (eval_dir / "latest.json").write_text(json.dumps(report), encoding="utf-8")
+    monkeypatch.setattr(main.config, "REPO_ROOT", tmp_path)
+    client = TestClient(create_app(lambda: FakePipeline([])))
+    resp = client.get("/eval")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["available"] is True
+    assert body["question_count"] == 2
+    assert body["models"][0]["model"] == "gemma4:latest"
+
+
 def test_health_reports_each_dependency(monkeypatch):
     import api.main as main
     monkeypatch.setattr(main, "_check_ollama", lambda: "ok")

@@ -7,3 +7,9 @@ sources:
     tables:
       - name: trips
         description: "Raw NYC Taxi trips loaded from Parquet in Faza 1 (untransformed)."
+  - name: stream
+    database: taxi-chat-data
+    schema: stream
+    tables:
+      - name: trips
+        description: "Simulated live trips streamed via Pub/Sub in Faza 4 (already renamed/typed, carries trip_key)."
