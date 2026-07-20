@@ -273,7 +273,115 @@ Ogólna zasada: jeśli efekt ma odpalać przy każdym powtórzeniu akcji, zależ
 musi być coś, co **rośnie z każdą akcją** (licznik, timestamp), a nie dane, które
 przy powtórzeniu są identyczne.
 
-## 8. Co sprawdzić po zmianach w wyglądzie
+## 8. Kontrast: mockup nie jest audytem dostępności
+
+Design 1C używa `#9aa1ad` na jasnoszare eyebrowsy, nagłówki tabeli, placeholder
+i podsumowanie wierszy. Wygląda elegancko — i **nie spełnia WCAG AA**:
+
+```
+#9aa1ad na #ffffff → 2.60:1   (próg AA dla zwykłego tekstu: 4.5:1)
+#9aa1ad na #f8f9fb → 2.47:1
+```
+
+To nie jest błąd projektanta mockupu — mockup pokazuje *kierunek wizualny*, a
+nie gwarantuje dostępności. **Sprawdzenie kontrastu należy do implementacji.**
+
+Zamiast zgadywać „chyba za jasne", policzyliśmy kontrast wszystkich 14 par
+kolor/tło w palecie. Jedyną wadliwą był `faint`. Dobraliśmy najjaśniejszy kolor
+na tej samej osi barwy, który zdaje AA na wszystkich trzech tłach:
+
+```
+#687182 → panel 4.91 · subtle 4.67 · shell 4.51
+```
+
+Kluczowe: **nie skoczyliśmy od razu do `--color-muted`**. Gdyby `faint` zrównał
+się z `muted`, zniknąłby jeden z trzech stopni hierarchii tekstu i 1C straciłby
+część swojej gęstości. Naprawa dostępności nie musi kasować projektu — trzeba
+tylko poszukać najmniejszej wystarczającej zmiany.
+
+### Pułapka: `opacity` na stanie `disabled`
+
+Wyłączony przycisk miał `disabled:opacity-40`. Biały tekst na prawie czarnym
+tle, wyblakły do 40%, daje ~1.5:1 — etykieta „Zapytaj" jest wtedy praktycznie
+niewidoczna, **dokładnie w momencie, gdy użytkownik czeka na odpowiedź i patrzy
+na przycisk**. `opacity` przygasza tekst *i tło naraz*, więc nigdy nie wiadomo,
+jaki kontrast z tego wyjdzie. Rozwiązanie: jawna para kolorów.
+
+```jsx
+disabled:bg-hair-soft disabled:text-muted   /* 4.83:1 */
+```
+
+**Zasada:** stany trwałe (`disabled`, `readonly`) opisuj kolorami, nie
+przezroczystością. `opacity` zostaw animacjom, gdzie stan jest przejściowy.
+
+### Uwaga o narzędziach
+
+Panel Accessibility w DevTools pokazał dla przycisku `1.49` — ale mierzył go w
+stanie **wyłączonym** (z `opacity`). Ten sam przycisk aktywny to 17:1. Zanim
+uznasz kontrast za zepsuty, sprawdź, **który stan** narzędzie właśnie mierzy.
+
+## 9. Dwie pluskwy, które ujawniły dopiero prawdziwe dane
+
+Po podłączeniu API + BigQuery + Ollama i zadaniu realnego pytania wyszły rzeczy,
+których nie pokazały ani testy, ani dane przygotowane do zrzutów ekranu.
+
+### 9.1 Słupek przy wyniku jednowierszowym
+
+Pytanie „ile kursów w styczniu 2023?" zwraca **jeden wiersz**. Słupek skalowany
+do maksimum kolumny miał wtedy zawsze 100% szerokości — pas koloru przez pół
+karty, który **udaje wykres, nie niosąc żadnej informacji** (jedna wartość nie
+ma się do czego porównać).
+
+```js
+if (rows.length < 2) return null;   // mniej niż dwa wiersze → brak słupków
+```
+
+Ogólniejsza lekcja: wizualizacja porównawcza (słupki, udziały, rankingi) ma sens
+dopiero przy **co najmniej dwóch punktach**. Przy jednym pokaż samą liczbę.
+
+### 9.2 `cleanReason` i nowe linie — dlaczego regexp „działał" w testach
+
+Na żywym odrzuceniu z BigQuery w UI został śmieć, który ta funkcja miała
+usuwać: `Location: None Job ID: e852ee68-…`. Ale uruchomiona w izolacji na tym
+samym tekście — działała. Różnica: **prawdziwy komunikat miał znaki nowej
+linii**, bo `google-cloud` renderuje `BadRequest` wielolinijkowo.
+
+```js
+body.replace(/\s*Job ID:.*$/i, "")    // ⚠ `.` nie łapie \n, `$` = koniec linii
+body.replace(/\s*Job ID:.*$/is, "")   // ✓ flaga `s` (dotAll)
+```
+
+Wszystkie dotychczasowe testy `cleanReason` używały **jednolinijkowych**
+komunikatów — dlatego luka przetrwała code review i 45 zielonych testów.
+
+> **Zasada:** przy parsowaniu tekstu z zewnętrznego systemu testuj też wariant
+> wielolinijkowy. `.` i `$` w JS domyślnie zatrzymują się na `\n`, a komunikaty
+> błędów bibliotek chmurowych bywają wielolinijkowe częściej, niż się wydaje.
+
+To najlepszy w tym zadaniu argument za uruchamianiem aplikacji na prawdziwych
+danych: dane testowe piszemy **my**, więc mimowolnie omijamy w nich przypadki,
+o których nie pomyśleliśmy.
+
+## 10. Zawijanie SQL zamiast przewijania
+
+Pierwsza wersja bloku SQL miała `overflow-x-auto`. Zgodne z zasadą „szerokie
+treści przewijaj wewnątrz kontenera, nie rozpychaj strony" — ale **złe dla tego
+konkretnego zastosowania**. To konsola, w której SQL się *czyta i kopiuje*;
+poziomy pasek przewijania ukrywa końcówkę każdego dłuższego zapytania i zmusza
+do przewijania w bok przy każdej linii.
+
+```jsx
+<pre className="whitespace-pre-wrap wrap-break-word ...">
+```
+
+`whitespace-pre-wrap` zachowuje własne podziały linii i wcięcia modelu, a
+dodatkowo zawija to, co się nie mieści. Tabela wyników **nadal** przewija się w
+poziomie — tam kolumn może być dowolnie wiele i zawijanie rozbiłoby siatkę.
+
+Wniosek: „przewijać czy zawijać" to nie jest reguła globalna, tylko decyzja per
+typ treści. Kod do czytania → zawijaj. Tabela → przewijaj.
+
+## 11. Co sprawdzić po zmianach w wyglądzie
 
 ```bash
 cd frontend
@@ -298,4 +406,10 @@ szerokości, `scrollWidth` vs `clientWidth`, kolory z `getComputedStyle`.
 | Mobile | Sztywna szerokość sidebara → poziomy scroll; zmień też kierunek flexa |
 | `useEffect` | Reaguje na zmianę wartości; na *powtarzalne zdarzenie* potrzeba licznika |
 | Weryfikacja | Testy nie widzą geometrii — mierz DOM w przeglądarce |
+| Kontrast | Mockup nie gwarantuje WCAG — policz wszystkie pary kolor/tło sam |
+| `opacity` | Nie na stany trwałe (`disabled`) — przygasza tekst i tło naraz |
+| Regexpy | `.` i `$` stają na `\n`; testuj warianty wielolinijkowe (flaga `s`) |
+| Wykresy | Słupki mają sens od 2 punktów; przy jednym pokaż samą liczbę |
+| Zawijać czy przewijać | Decyzja per typ treści: kod → zawijaj, tabela → przewijaj |
+| Prawdziwe dane | Dane testowe piszemy my, więc omijają przypadki, o których nie pomyśleliśmy |
 | Uczciwość | Nie odtwarzaj z mockupu danych, których backend nie ma |
