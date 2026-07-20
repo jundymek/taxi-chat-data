@@ -339,10 +339,12 @@ A gate that has never failed is not known to work. On a throwaway branch:
 
 ```bash
 git checkout -b tmp/gitleaks-selftest
-printf 'stripe_key = "sk_live_REDACTED_EXAMPLE_VALUE"\n' > leak_probe.txt
+# Assembled at runtime, never written out as a literal: a document containing
+# the full pattern would itself trip the scanner it is describing.
+printf 'stripe_key = "%s"\n' "sk_live_$(printf '4eC39HqLyjWDarjtT1zdp7dc')" > leak_probe.txt
 git add leak_probe.txt
 git commit -m "test: planted secret (never merged)"
-docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect \
+docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 detect \
   --source=/repo --config=/repo/.gitleaks.toml --verbose
 echo "exit code: $?"
 ```
