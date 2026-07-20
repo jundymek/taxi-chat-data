@@ -55,10 +55,10 @@ pyupgrade, and bugbear. Not `ALL` — the point is a clean gate on existing code
 not a style migration.
 
 `dags/` is written for Airflow's Python 3.11 interpreter, not the project's 3.14.
-Ruff's `target-version = "py314"` only affects `UP` suggestions; if any `UP` fix
-in `dags/` would emit syntax the 3.11 image cannot parse, that file gets a
-`per-file-ignores` entry rather than the fix. This is checked during
-implementation, not assumed.
+Ruff's `target-version = "py314"` only affects `UP` suggestions, so this was
+checked directly: `ruff check --select UP dags/` reports no violations, so no
+`UP` fix can introduce 3.14-only syntax into the DAG. No `per-file-ignores`
+entry is needed.
 
 ### requirements-dev.txt
 
@@ -72,7 +72,13 @@ requirements should not carry the test runner.
 `pull_request`. Three parallel jobs so each failure is independently visible:
 
 **`lint`** — `actions/setup-python@v5` (3.14, `cache: pip`) → `pip install ruff`
-→ `ruff check .` → `ruff format --check .`.
+→ `ruff check .`.
+
+`ruff format --check` is deliberately **not** part of the gate. Measured against
+the current tree it would reformat 33 of 44 files — a repo-wide style diff that
+this phase explicitly excludes, and one that catches no real defect. Formatting
+can be adopted later as its own isolated commit. `ruff check` alone flags 34
+issues (18 auto-fixable), which Task 7-1 resolves.
 
 **`test`** — setup-python 3.14 → `pip install -r requirements.txt -r
 requirements-dev.txt` → `pytest`. The existing `pytest.ini` sets
@@ -191,9 +197,9 @@ and git history. No invented figures.
 
 ## Risks
 
-- **Ruff finds more than expected in existing code.** Mitigated by the narrow
-  rule set. If a single file needs disproportionate churn, it gets a
-  `per-file-ignores` entry and a follow-up note rather than blocking the task.
+- ~~**Ruff finds more than expected in existing code.**~~ Retired: measured
+  before planning. 34 issues, 18 auto-fixable, 16 manual (13 of them `E501`).
+  Bounded and safe for a single task.
 - **`dbt parse` may still want credentials.** Fallback documented in 7-1.
 - **Merging the Airflow compose file could break the Faza 6 DAG workflow.**
   Mitigated by the explicit re-test in 7-3 and by updating the Faza 6 task doc
