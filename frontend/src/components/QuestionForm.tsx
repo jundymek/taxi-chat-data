@@ -40,8 +40,10 @@ export function QuestionForm({ disabled, preset, onAsk }: QuestionFormProps) {
         placeholder="Zadaj pytanie o przejazdy taxi…"
         aria-label="Pytanie"
       />
+      {/* Disabled uses an explicit colour pair, not opacity: fading white on
+          near-black drops the label to ~1.5:1, unreadable while you wait. */}
       <button
-        className="m-1.5 cursor-pointer rounded-md border-0 bg-ink px-4 text-[12px] font-semibold text-white outline-none hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-40"
+        className="m-1.5 cursor-pointer rounded-md border-0 bg-ink px-4 text-[12px] font-semibold text-white outline-none hover:bg-ink-soft focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:cursor-default disabled:bg-hair-soft disabled:text-muted"
         type="submit"
         disabled={disabled || !question.trim()}
       >

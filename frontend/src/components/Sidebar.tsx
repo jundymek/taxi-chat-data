@@ -30,7 +30,7 @@ export function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
         SESJE
       </div>
       {sessions.length ? (
-        <ul className="flex list-none flex-col gap-px px-2 py-0">
+        <ul className="flex list-none flex-col gap-px px-2 pb-2.5">
           {sessions.map((session) => (
             <li key={session.id}>
               <button
@@ -49,7 +49,7 @@ export function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
           ))}
         </ul>
       ) : (
-        <p className="m-0 px-[18px] text-[11.5px] leading-[1.45] text-faint">
+        <p className="m-0 px-4 pb-2.5 text-[11.5px] leading-[1.45] text-faint">
           Zadane pytania pojawią się tutaj.
         </p>
       )}

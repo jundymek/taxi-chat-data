@@ -40,9 +40,11 @@ export function cleanReason(reason: string): string {
   let body = reason.slice(WRAPPER.length);
   // Drop the leading "POST https://…jobs?prettyPrint=false:" segment.
   body = body.replace(/\s*POST\s+https?:\/\/\S+?:\s*/i, " ");
-  // Drop the trailing " at [r:c] Location: … Job ID: …" noise.
-  body = body.replace(/\s*(at \[\d+:\d+\])?\s*Location:.*$/i, "");
-  body = body.replace(/\s*Job ID:.*$/i, "");
+  // Drop the trailing " at [r:c] Location: … Job ID: …" noise. The `s` flag
+  // matters: google-cloud puts Location/Job ID on their own lines, and without
+  // dotAll `.*` stops at the first newline, leaving the tail on screen.
+  body = body.replace(/\s*(at \[\d+:\d+\])?\s*Location:.*$/is, "");
+  body = body.replace(/\s*Job ID:.*$/is, "");
   const cleaned = body.trim();
   // If stripping left nothing, show the wrapper alone rather than re-exposing
   // the raw URL/Job-ID noise this function exists to remove.

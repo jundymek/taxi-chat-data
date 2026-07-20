@@ -31,7 +31,13 @@
   --color-ink: #191c22; /* primary text + primary button */
   --color-ink-soft: #2e3440; /* code text, button hover */
   --color-muted: #626a78; /* secondary text, chips */
-  --color-faint: #9aa1ad; /* eyebrows, durations, captions */
+  /* Eyebrows, durations, captions. 1C draws these at #9aa1ad, but that is
+     2.6:1 on white — below WCAG AA (4.5:1) for the real text it carries here
+     (empty state, table headers, placeholder). Darkened to the lightest value
+     on the same hue axis that clears AA on panel/subtle/shell (4.91/4.67/4.51)
+     while staying clearly lighter than --color-muted, so 1C's three-step text
+     hierarchy survives. */
+  --color-faint: #687182;
 
   /* Semantic */
   --color-accent: #2e6be6; /* SQL keywords, bars, links */

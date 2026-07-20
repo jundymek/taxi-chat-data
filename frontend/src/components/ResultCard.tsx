@@ -23,11 +23,14 @@ export function formatScan(gb: number): string {
 }
 
 /**
- * The last column holding a finite number in every row, or null. 1C draws a
- * magnitude bar beside the measure; picking the LAST numeric column favours the
- * aggregate in a typical `SELECT dimension, AVG(x)` shape.
+ * The column to draw magnitude bars for, or null when bars would not inform.
+ * Picking the LAST fully-numeric column favours the aggregate in a typical
+ * `SELECT dimension, AVG(x)` shape.
  */
 export function barColumn(rows: Record<string, unknown>[], columns: string[]): string | null {
+  // A single row has nothing to compare against — its bar would always be full
+  // width and read as a chart while carrying no information. Show numbers only.
+  if (rows.length < 2) return null;
   const numeric = columns.filter((c) =>
     rows.every((r) => typeof r[c] === "number" && Number.isFinite(r[c] as number)),
   );
@@ -111,7 +114,10 @@ export function ResultCard({ result }: ResultCardProps) {
             </span>
             <CopySql sql={result.sql} />
           </div>
-          <pre className="m-0 overflow-x-auto bg-code px-4 py-3 font-mono text-[11.5px] leading-[1.65] text-ink-soft">
+          {/* Wrapped, not scrolled: this is a console for reading SQL, and a
+              horizontal scrollbar hides the tail of every long query. Wrapping
+              preserves the model's own newlines and indentation. */}
+          <pre className="m-0 whitespace-pre-wrap wrap-break-word bg-code px-4 py-3 font-mono text-[11.5px] leading-[1.65] text-ink-soft">
             {result.sql}
           </pre>
         </>

@@ -27,6 +27,10 @@ describe("barColumn", () => {
   it("returns null for an empty result", () => {
     expect(barColumn([], [])).toBeNull();
   });
+
+  it("draws no bar for a single row, which has nothing to scale against", () => {
+    expect(barColumn([{ total_trips: 2998707 }], ["total_trips"])).toBeNull();
+  });
 });
 
 describe("barWidth", () => {

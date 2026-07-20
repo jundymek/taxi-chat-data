@@ -52,6 +52,17 @@ describe("cleanReason", () => {
     expect(cleaned).not.toContain("Location: None");
   });
 
+  it("strips the tail when google-cloud puts it on separate lines", () => {
+    // Observed live: BadRequest renders Location/Job ID as their own lines, so
+    // a non-dotAll `.*` stopped at the first newline and left the noise in.
+    const raw =
+      "BigQuery odrzucił zapytanie: Unrecognized name: t at [1:94]\nLocation: None\nJob ID: e852ee68-b355-404d-b860-e9c7eb28ab50";
+    const cleaned = cleanReason(raw);
+    expect(cleaned).toBe("BigQuery odrzucił zapytanie: Unrecognized name: t");
+    expect(cleaned).not.toContain("Location");
+    expect(cleaned).not.toContain("Job ID");
+  });
+
   it("returns a classic guardrail reason unchanged", () => {
     const reason = "Tabela raw.trips jest poza dozwolonymi zbiorami danych (marts, staging).";
     expect(cleanReason(reason)).toBe(reason);
