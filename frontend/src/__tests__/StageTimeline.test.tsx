@@ -36,7 +36,7 @@ describe("StageTimeline (mockup C1)", () => {
     // after generate_sql, the next stage is validate → "Guardraile"
     const pending = screen.getByTestId("pending-station");
     expect(pending).toHaveTextContent("Guardraile");
-    expect(pending.className).toContain("pending");
+    expect(pending.className).toContain("run");
   });
 });
 
