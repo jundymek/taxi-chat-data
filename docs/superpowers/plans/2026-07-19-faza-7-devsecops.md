@@ -294,9 +294,15 @@ useDefault = true
 # .env.example ships placeholder values (GCP_PROJECT_ID=your-project-id and
 # similar) that can trip generic-credential heuristics. Scope the exception to
 # that one path — never suppress a rule globally.
-[[allowlist.paths]]
-path = '''^\.env\.example$'''
+[allowlist]
+paths = [
+  '''^\.env\.example$''',
+]
 ```
+
+Note the schema: gitleaks v8 expects `[allowlist]` with a `paths` **array**. The
+`[[allowlist.paths]]` / `path = ...` form fails at config load with
+`FTL Failed to load config ... expected type 'string', got ... map`.
 
 - [ ] **Step 2: Append the secrets job to the workflow**
 
@@ -333,12 +339,18 @@ A gate that has never failed is not known to work. On a throwaway branch:
 
 ```bash
 git checkout -b tmp/gitleaks-selftest
-printf 'aws_secret_access_key = "AKIAIOSFODNN7EXAMPLE"\n' > /tmp/leak_probe.txt
-git add -f /tmp/leak_probe.txt 2>/dev/null || cp /tmp/leak_probe.txt ./leak_probe.txt && git add leak_probe.txt
+printf 'stripe_key = "sk_live_REDACTED_EXAMPLE_VALUE"\n' > leak_probe.txt
+git add leak_probe.txt
 git commit -m "test: planted secret (never merged)"
 docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect \
   --source=/repo --config=/repo/.gitleaks.toml --verbose
+echo "exit code: $?"
 ```
+
+Do **not** use `AKIAIOSFODNN7EXAMPLE` as the planted secret. It is AWS's public
+documentation placeholder and gitleaks deliberately ignores it, so the probe
+would report "no leaks found" and wrongly suggest the gate is broken. Verified:
+that string scans clean, the Stripe-shaped one above yields `leaks found: 1`.
 
 Expected: gitleaks reports a finding and exits non-zero.
 
