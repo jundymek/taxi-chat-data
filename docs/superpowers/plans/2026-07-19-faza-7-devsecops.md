@@ -94,10 +94,18 @@ In `requirements.txt`, delete the line `pytest>=8.0`. Leave every other line unt
 
 - [ ] **Step 4: Install ruff and confirm the baseline**
 
+Install **ruff only** — not the whole dev file:
+
 ```bash
-.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pip install ruff
 .venv/bin/ruff check .
 ```
+
+Do NOT run `pip install -r requirements-dev.txt` into `.venv`: it pulls
+`dbt-bigquery`, which drags in 7 `dbt-*` packages and downgrades
+`google-cloud-storage` (3.13 → 3.1) in the shared environment. `requirements-dev.txt`
+exists for CI, which builds a throwaway environment. dbt runs in its own container
+locally (`docker compose --profile dbt`).
 
 Expected: `Found 34 errors.` with `[*] 18 fixable with the --fix option`.
 
