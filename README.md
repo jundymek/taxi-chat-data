@@ -1,99 +1,135 @@
 # taxi-chat-data
 
-A data-engineering + GenAI project: "chat with data" on NYC Taxi data.
-Full design: `docs/DESIGN.md`. Current phase plan: `docs/superpowers/plans/`.
+An end-to-end data-engineering + GenAI project on NYC Taxi data: batch and
+streaming ingestion into BigQuery, a dbt star schema on top, and a natural-language
+chat interface that answers questions by generating SQL against the warehouse.
 
-## Status
-- [x] Faza 0: setup
-- [x] Faza 1: batch ingestion (Parquet → GCS → BigQuery raw)
-- [x] Faza 2: data warehouse (dbt, star schema)
-- [x] Faza 3: GenAI (RAG + NL2SQL + guardrails)
-- [x] Faza 4: streaming (Pub/Sub)
-- [x] Faza 5: FastAPI + frontend
-- [ ] Faza 6: evaluation + Airflow
-- [ ] Faza 7: DevSecOps
+Design document: [docs/DESIGN.md](docs/DESIGN.md) · Phase plans: [docs/superpowers/plans/](docs/superpowers/plans/)
 
-## Running (Faza 1)
-1. GCP prerequisites — see the plan in `docs/superpowers/plans/`.
-2. `python3 -m venv .venv && source .venv/bin/activate`
-3. `pip install -r requirements.txt`
-4. `cp .env.example .env` and fill in `GCP_PROJECT_ID`, `GCS_BUCKET`.
-5. `python -m ingestion.download`
-6. `python -m ingestion.batch_load`
+## Architecture
 
-## Streaming (Faza 4)
-
-Simulated live feed over real Pub/Sub: the producer replays the local Parquet
-into topic `trips-stream` (throttled, with deliberate duplicate injection),
-the consumer streams rows into BigQuery `stream.trips`.
-
-1. One-time: enable the API and create resources (idempotent):
-   `gcloud services enable pubsub.googleapis.com` and
-   `.venv/bin/python -c "from ingestion.stream_common import *; ensure_stream_resources(load_stream_config())"`
-2. Terminal A: `.venv/bin/python -m ingestion.stream_consumer`
-3. Terminal B: `.venv/bin/python -m ingestion.stream_producer --limit 100000 --rate 500 --dup-rate 0.02`
-
-At-least-once semantics: ack only after a successful insert, nack → Pub/Sub
-redelivery, and BigQuery `insertId` (= dbt-compatible `trip_key`) deduplicates.
-Verify:
-
-```sql
-SELECT COUNT(*) total, COUNT(DISTINCT trip_key) uniq
-FROM `taxi-chat-data.stream.trips`
+```mermaid
+flowchart LR
+  P[Parquet<br/>NYC TLC] --> G[GCS raw]
+  G --> BQR[(BigQuery<br/>raw)]
+  PS[Pub/Sub<br/>trips-stream] --> BQS[(BigQuery<br/>stream.trips)]
+  BQR --> DBT[dbt<br/>staging → marts]
+  BQS --> DBT
+  DBT --> DW[(Star schema<br/>partitioned + clustered)]
+  DW --> GEN[genai<br/>RAG + NL2SQL + guardrails]
+  OLL[Ollama<br/>host] --> GEN
+  GEN --> API[FastAPI<br/>SSE /chat]
+  API --> FE[Frontend]
+  AF[Airflow] -.orchestrates.-> DBT
 ```
 
-Cost note: streaming inserts are billable (~$0.05/GB) — the default 100k
-sample costs under a cent; Pub/Sub itself stays within the free tier.
-`stream.trips` merges into the dbt staging layer in Faza 6.
+## Quickstart
 
-## Chat with data (Faza 3)
+**Prerequisites**
 
-Ask the warehouse questions in Polish, answered by a local LLM (zero API cost):
+- Python 3.14 and Docker
+- [Ollama](https://ollama.com) on the host with `gemma4`, `llama3.1:8b`, `nomic-embed-text`
+- `gcloud auth application-default login` (the project uses ADC — never key files)
 
-1. Prerequisites: Ollama running (`gemma4:latest`, `nomic-embed-text:latest`),
-   ADC configured, Faza 2 warehouse built.
-2. Build the schema index (re-run after dbt schema changes):
-   `.venv/bin/python -m genai.indexer`
-3. Ask: `.venv/bin/python -m genai.ask "Jaki był średni napiwek przy płatności kartą?"`
-   — prints the Polish answer, the SQL used, and gigabytes scanned.
+**Setup**
 
-Flow: RAG over dbt model descriptions + curated few-shots (Chroma) → gemma4
-generates BigQuery SQL → **guardrails validate before execution** (sqlglot AST
-parse, SELECT-only, dataset allowlist `staging`/`marts`, enforced `LIMIT`,
-BigQuery dry-run scan gate 1 GB) → execution capped by `maximum_bytes_billed`
-→ gemma4 summarizes in Polish. Orchestrated as a LangGraph state graph with a
-validate→regenerate retry cycle (max 3 attempts, then graceful refusal).
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env    # fill in GCP_PROJECT_ID and GCS_BUCKET
+```
 
-Tests: `pytest` (unit, mocked); `pytest -m integration` (live Ollama + BigQuery).
+**Run**
 
-## Chat UI (Faza 5)
+```bash
+docker compose --profile api up          # API + docs on http://localhost:8000/docs
+docker compose --profile airflow up -d   # Airflow UI on http://localhost:8080
+docker compose --profile dbt run --rm dbt build
+```
 
-A single-screen web app over the Faza 3 pipeline: `POST /chat` streams each
-pipeline stage over **SSE** (a FastAPI adapter around LangGraph `stream()` — no
-`genai/` changes), `GET /health` reports Ollama/BigQuery/Chroma status, and a
-Vite + React + TypeScript SPA (owner-approved mockup C1, "Linia M") renders the
-live stage timeline — including red **ODRZUCONE** guardrail rejections — then
-the answer, SQL, rows and GB scanned. The SSE frame contract is
-`api/schemas.py` (mirrored 1:1 in `frontend/src/types.ts`).
+Ollama stays on the host on purpose: a container on macOS gets no GPU access and
+would re-download ~10 GB of models. Containers reach it via `host.docker.internal`.
 
-1. Prerequisites: the Faza 3 stack (Ollama, ADC, `.venv/bin/python -m
-   genai.indexer` if `data/chroma/` is missing).
-2. Build the frontend and serve everything on one port:
-   ```bash
-   cd frontend && pnpm install && pnpm run build && cd ..
-   .venv/bin/uvicorn api.main:app --port 8000
-   ```
-3. Open `http://localhost:8000` — the API serves `frontend/dist` statically, so
-   the whole app lives on `:8000`. Ask a question and watch the stages stream.
+Airflow creates DAGs paused by default — before triggering `dbt_transform` for
+the first time, run `airflow dags unpause dbt_transform` (or unpause it in the
+UI), otherwise scheduling silently does nothing.
 
-Dev mode (hot reload, Vite proxies `/chat` + `/health` to `:8000`):
-`cd frontend && pnpm dev` alongside the uvicorn process.
+For the frontend dev server, see [frontend/](frontend/) — it runs on `:3002`.
 
-Tests: `.venv/bin/pytest` (API SSE frame sequences incl. retry/refusal/error,
-no live services); `cd frontend && pnpm test` (parser chunking, hook stream
-lifecycle, C1 components).
+## What this demonstrates
 
-## Mapping to job requirements
-See section 10 in `docs/DESIGN.md`. Faza 3 highlights: NL2SQL + risk mitigation
-→ `genai/guardrails.py` + pipeline retry; RAG + vector DB → `genai/indexer.py`,
-`genai/retriever.py` + Chroma; GenAI quality evaluation → Faza 6.
+| Requirement | Where in the project |
+|---|---|
+| Batch + streaming pipeline | [ingestion/batch_load.py](ingestion/batch_load.py), [ingestion/stream_producer.py](ingestion/stream_producer.py), [ingestion/stream_consumer.py](ingestion/stream_consumer.py) |
+| Data lake + warehouse | GCS raw layer + [dbt/models/](dbt/models/) star schema |
+| Logical/physical modelling | [dbt/models/marts/](dbt/models/marts/) — dim/fct with partitioning and clustering |
+| SQL optimisation in BigQuery | [analysis/measure_partitioning.py](analysis/measure_partitioning.py) — partition/cluster scan measurements |
+| LLM / GenAI, chat with data | [genai/](genai/) + [api/main.py](api/main.py) |
+| NL2SQL + risk mitigation | [genai/nl2sql.py](genai/nl2sql.py), [genai/guardrails.py](genai/guardrails.py) |
+| RAG + vector store | [genai/retriever.py](genai/retriever.py), [genai/indexer.py](genai/indexer.py) (Chroma) |
+| GenAI quality evaluation | [genai/eval.py](genai/eval.py), [docs/eval/latest.md](docs/eval/latest.md) |
+| Orchestration | [dags/dbt_transform_dag.py](dags/dbt_transform_dag.py) (Airflow) |
+| DevSecOps | ADC, [.gitleaks.toml](.gitleaks.toml), [.github/workflows/ci.yml](.github/workflows/ci.yml) |
+| Python (advanced) | Whole codebase, [tests/](tests/) |
+
+## Model evaluation
+
+18 natural-language questions with reference SQL, scored on order-insensitive
+result-set equality. Numbers from [docs/eval/latest.md](docs/eval/latest.md):
+
+| Model | Accuracy | Executed | Avg attempts | Refusals |
+|---|---|---|---|---|
+| gemma4:latest | 67% | 94% | 1.44 | 1 |
+| llama3.1:8b | 61% | 78% | 1.50 | 4 |
+
+Regenerate with `python -m genai.eval`; the API also serves the latest report at
+`GET /eval`.
+
+## DevSecOps
+
+- **Credentials:** Application Default Credentials only. No service-account keys
+  exist in the project, and [.gitignore](.gitignore) blocks `*-key.json`,
+  `*-sa.json`, `credentials.json` and `.env` so one cannot be added by accident.
+- **Secret scanning:** gitleaks runs over the *full* git history on every push
+  and PR — a secret that was committed and reverted is still a leak.
+- **CI:** four jobs on every push and PR — `lint` (ruff), `test` (pytest), `dbt`
+  (`dbt deps` + `dbt parse` — model/YAML validation with no BigQuery connection,
+  so CI holds zero cloud credentials), and `secrets` (gitleaks over full history).
+- **Cost control:** [genai/guardrails.py](genai/guardrails.py) validates generated
+  SQL and runs a BigQuery dry-run to reject queries that would scan too much data.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| [ingestion/](ingestion/) | Batch loader, Pub/Sub producer and consumer |
+| [dbt/](dbt/) | Staging models, star schema, tests |
+| [genai/](genai/) | LLM client, RAG retriever, NL2SQL, guardrails, evaluation |
+| [api/](api/) | FastAPI app, SSE streaming contract |
+| [frontend/](frontend/) | Chat UI |
+| [dags/](dags/) | Airflow DAGs |
+| [tests/](tests/) | pytest suite |
+| [docs/](docs/) | Design, specs, plans, per-phase feature docs |
+
+## Build phases
+
+- [x] Faza 0 — setup: repo, GCP project, `.env`
+- [x] Faza 1 — batch ingestion: Parquet → GCS → BigQuery raw
+- [x] Faza 2 — warehouse: dbt staging → star schema, partitioning and clustering
+- [x] Faza 3 — GenAI: RAG + NL2SQL + guardrails
+- [x] Faza 4 — streaming: Pub/Sub producer and consumer
+- [x] Faza 5 — FastAPI + frontend
+- [x] Faza 6 — evaluation, stream merge, Airflow
+- [x] Faza 7 — DevSecOps: CI, secret scanning, unified compose
+
+Per-phase detail lives in [docs/features/](docs/features/).
+
+## Deliberate limitations
+
+- **One month of data.** A small slice keeps the project inside the BigQuery free
+  tier. Nothing in the design prevents scaling it up.
+- **Neo4j / graph modelling deferred.** Listed as nice-to-have; it would not have
+  changed the pipeline's shape.
+- **Ollama on the host, not in Compose.** GPU access and a 10 GB model re-download.
+- **`dbt test` runs locally and in Airflow, not in CI.** CI holds no GCP
+  credentials by design, and `dbt test` requires a live warehouse.
