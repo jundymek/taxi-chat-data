@@ -4,15 +4,20 @@
 A local, manually-triggered Airflow DAG that orchestrates the existing dbt
 project. `dags/dbt_transform_dag.py` defines `dag_id="dbt_transform"` with two
 `BashOperator` tasks — `dbt_run` then `dbt_test` (`dbt_run >> dbt_test`),
-`schedule=None`, `catchup=False`. `docker-compose.airflow.yml` runs Airflow
-2.10.4 (LocalExecutor) + a Postgres metadata DB, mounts `dags/` and `dbt/`,
-binds ADC read-only, and installs `dbt-bigquery` in-container. The DAG is
-validated by an `ast`-based structure test (no Airflow import needed) plus the
-live docker-compose run.
+`schedule=None`, `catchup=False`. The `airflow` profile in the repo-root
+`docker-compose.yml` runs Airflow 2.10.4 (LocalExecutor) + a Postgres metadata
+DB, mounts `dags/` and `dbt/`, binds ADC read-only, and installs
+`dbt-bigquery` in-container. The DAG is validated by an `ast`-based structure
+test (no Airflow import needed) plus the live docker-compose run.
+
+Since Faza 7 Task 3, Airflow lives behind the `airflow` profile of the single
+unified `docker-compose.yml` (alongside the `dbt` and `api` profiles) instead
+of a separate `docker-compose.airflow.yml` — run it with
+`docker compose --profile airflow <cmd>`.
 
 ## Files touched
 - `dags/dbt_transform_dag.py` (NEW) — the DAG (Airflow 2.x API, matches the container).
-- `docker-compose.airflow.yml` (NEW) — Airflow LocalExecutor + Postgres + ADC bind; `dbt-bigquery>=1.8,<2.0`.
+- `docker-compose.yml` `airflow` profile — Airflow LocalExecutor + Postgres + ADC bind; `dbt-bigquery>=1.8,<2.0` (unified under one compose file in Faza 7 Task 3; originally its own `docker-compose.airflow.yml`).
 - `tests/test_dbt_transform_dag.py` (NEW) — `ast`-based structure test, no airflow import.
 - `docs/learn/faza-6-airflow.md` (NEW) — Polish learning note.
 - `docs/tasks/faza-6-task-3.md` (UPDATE) — story close-out.
@@ -57,3 +62,7 @@ live docker-compose run.
     builds models (`Done. PASS=6`), via mounted ADC.
   - `dbt_test` (45s) — `Done. PASS=25 WARN=0 ERROR=0`, including
     `unique_stg_trips_trip_key` (proves the raw+stream dedup from task-1).
+- Regression run after the Faza 7 Task 3 compose unification (`docker compose
+  --profile airflow up -d`, run `manual__2026-07-20T10:11:07+00:00`): DAG
+  **success**, both tasks green (`dbt_run` 55s, `dbt_test` 57s) — confirms the
+  merge into the single `docker-compose.yml` did not break the DAG.
