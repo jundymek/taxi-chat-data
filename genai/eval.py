@@ -87,7 +87,9 @@ def _rows_match(a_row: dict, b_row: dict, tol: float) -> bool:
     # Column NAMES are ignored — SQL aliases are arbitrary (a model's bare
     # `COUNT(*)` becomes BigQuery's `f0_`, the reference's `COUNT(*) AS n`
     # becomes `n`; same answer). Compare values in column order.
-    return all(_cells_match(a, b, tol) for a, b in zip(a_row.values(), b_row.values()))
+    return all(
+        _cells_match(a, b, tol) for a, b in zip(a_row.values(), b_row.values(), strict=True)
+    )
 
 
 def result_sets_match(actual: list[dict], expected: list[dict], *, tol: float = 1e-6) -> bool:
@@ -164,7 +166,9 @@ def evaluate_case(case: EvalCase, pipeline, bq_client) -> CaseResult:
                       attempts=attempts, refused=False, error=None)
 
 
-def evaluate_model(model: str, cases: list[EvalCase], *, pipeline_factory, bq_client) -> ModelReport:
+def evaluate_model(
+    model: str, cases: list[EvalCase], *, pipeline_factory, bq_client
+) -> ModelReport:
     pipeline = pipeline_factory(model)
     results = [evaluate_case(c, pipeline, bq_client) for c in cases]
     return ModelReport(model=model, cases=results)

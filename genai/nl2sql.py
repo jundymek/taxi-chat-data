@@ -45,6 +45,8 @@ def extract_sql(response: str) -> str:
     return response.strip().rstrip(";")
 
 
-def generate_sql(llm, question: str, context: SchemaContext, error_feedback: str | None = None) -> str:
+def generate_sql(
+    llm, question: str, context: SchemaContext, error_feedback: str | None = None
+) -> str:
     response = llm.generate(build_prompt(question, context, error_feedback), system=SYSTEM_PROMPT)
     return extract_sql(response)

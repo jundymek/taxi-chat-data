@@ -15,7 +15,7 @@ import argparse
 import sys
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from google.cloud import bigquery, pubsub_v1
 
@@ -55,7 +55,7 @@ class BatchWriter:
                 self.rejected += 1
                 message.ack()
                 return
-            row["ingested_at"] = datetime.now(timezone.utc).isoformat()
+            row["ingested_at"] = datetime.now(UTC).isoformat()
             self._rows.append(row)
             self._messages.append(message)
             if len(self._rows) >= self._batch_size:

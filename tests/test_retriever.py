@@ -2,7 +2,7 @@ from pathlib import Path
 
 import chromadb
 
-from genai.indexer import SCHEMA_COLLECTION, EXAMPLES_COLLECTION
+from genai.indexer import EXAMPLES_COLLECTION, SCHEMA_COLLECTION
 from genai.retriever import Retriever
 from genai.types import SchemaContext
 
@@ -22,7 +22,10 @@ def _seed_chroma(chroma_dir: Path, embedder: FakeEmbedder):
         documents=schema_texts,
         embeddings=embedder.embed(schema_texts),
     )
-    example_texts = ["QUESTION: Ile było trip?\nSQL: SELECT 1", "QUESTION: platnosci?\nSQL: SELECT 2"]
+    example_texts = [
+        "QUESTION: Ile było trip?\nSQL: SELECT 1",
+        "QUESTION: platnosci?\nSQL: SELECT 2",
+    ]
     client.create_collection(EXAMPLES_COLLECTION).add(
         ids=["example-1", "example-2"],
         documents=example_texts,

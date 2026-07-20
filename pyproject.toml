@@ -1,0 +1,13 @@
+# Ruff configuration only. The project installs dependencies via
+# `pip install -r requirements.txt`, so there is deliberately no
+# [build-system] or [project] table here.
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+exclude = [".venv", "dbt/target", "dbt/dbt_packages", "frontend"]
+
+[tool.ruff.lint]
+# Deliberately narrow: pycodestyle errors, pyflakes, import sorting,
+# pyupgrade, bugbear. Not ALL — this is a correctness gate, not a
+# style migration.
+select = ["E", "F", "I", "UP", "B"]

@@ -83,7 +83,9 @@ def test_validation_failure_retries_with_feedback_then_succeeds():
         return ValidationResult(ok=True, sql=sql, reason=None, estimated_bytes=1)
 
     llm = FakeLLM([f"```sql\n{GOOD_SQL}\n```", f"```sql\n{GOOD_SQL}\n```", "Odpowiedź."])
-    app = build_pipeline(llm=llm, retriever=FakeRetriever(), validate_fn=flaky_validate, bq_client=FakeBQClient())
+    app = build_pipeline(
+        llm=llm, retriever=FakeRetriever(), validate_fn=flaky_validate, bq_client=FakeBQClient()
+    )
     state = app.invoke({"question": "Ile?"})
     assert state["refused"] is False
     assert calls["n"] == 2
@@ -134,7 +136,9 @@ def test_default_retriever_survives_generation_only_llm(monkeypatch):
         def generate(self, prompt, system=None):
             return f"```sql\n{GOOD_SQL}\n```"
 
-    app = build_pipeline(llm=GenerationOnlyLLM(), validate_fn=_validate_ok, bq_client=FakeBQClient())
+    app = build_pipeline(
+        llm=GenerationOnlyLLM(), validate_fn=_validate_ok, bq_client=FakeBQClient()
+    )
     state = app.invoke({"question": "Ile?"})
     assert captured["embedder"] is None
     assert state["refused"] is False
@@ -145,7 +149,9 @@ def test_refuses_after_exhausting_attempts():
         return ValidationResult(ok=False, sql=sql, reason="Tylko SELECT.", estimated_bytes=None)
 
     llm = FakeLLM(["```sql\nDROP TABLE x\n```"])
-    app = build_pipeline(llm=llm, retriever=FakeRetriever(), validate_fn=always_reject, bq_client=FakeBQClient())
+    app = build_pipeline(
+        llm=llm, retriever=FakeRetriever(), validate_fn=always_reject, bq_client=FakeBQClient()
+    )
     state = app.invoke({"question": "Usuń dane"})
     assert state["refused"] is True
     assert "Tylko SELECT." in state["answer"]

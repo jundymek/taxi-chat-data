@@ -1,5 +1,7 @@
 import os
+
 import pytest
+
 from ingestion.config import Config
 from ingestion.download import build_taxi_url, download_taxi_parquet
 

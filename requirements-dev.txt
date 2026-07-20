@@ -1,0 +1,5 @@
+# Dev/CI-only dependencies. Runtime deps live in requirements.txt.
+ruff>=0.6
+pytest>=8.0
+# Pinned to match the Airflow service and dbt/Dockerfile.
+dbt-bigquery>=1.8,<2.0

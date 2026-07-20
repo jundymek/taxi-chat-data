@@ -1,15 +1,12 @@
-import json
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from ingestion.stream_common import row_to_message
 from ingestion.stream_consumer import BatchWriter
 
 ROW = {
     "VendorID": 1,
-    "tpep_pickup_datetime": datetime(2023, 1, 1, 0, 32, 10, tzinfo=timezone.utc),
-    "tpep_dropoff_datetime": datetime(2023, 1, 1, 0, 40, 36, tzinfo=timezone.utc),
+    "tpep_pickup_datetime": datetime(2023, 1, 1, 0, 32, 10, tzinfo=UTC),
+    "tpep_dropoff_datetime": datetime(2023, 1, 1, 0, 40, 36, tzinfo=UTC),
     "passenger_count": 1.0, "trip_distance": 0.97, "RatecodeID": 1.0,
     "store_and_fwd_flag": "N", "PULocationID": 161, "DOLocationID": 141,
     "payment_type": 2, "fare_amount": 9.3, "extra": 1.0, "mta_tax": 0.5,

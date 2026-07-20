@@ -18,8 +18,7 @@ class FakePipeline:
 
     def stream(self, state, stream_mode="updates"):
         assert stream_mode == "updates"
-        for update in self.updates:
-            yield update
+        yield from self.updates
         if self.error:
             raise self.error
 

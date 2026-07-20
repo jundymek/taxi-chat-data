@@ -3,7 +3,10 @@ from genai.types import SchemaContext
 
 CTX = SchemaContext(
     tables=["Table marts.fct_trips: trips fact"],
-    examples=["QUESTION: Ile było przejazdów?\nSQL: SELECT COUNT(*) FROM `taxi-chat-data.marts.fct_trips`"],
+    examples=[
+        "QUESTION: Ile było przejazdów?\n"
+        "SQL: SELECT COUNT(*) FROM `taxi-chat-data.marts.fct_trips`"
+    ],
 )
 
 
