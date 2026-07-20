@@ -47,6 +47,12 @@ docker compose --profile airflow up -d   # Airflow UI on http://localhost:8080
 docker compose --profile dbt run --rm dbt build
 ```
 
+Compose is the one-command path for trying the project out. The virtualenv from
+the setup step is what you want for development — running the test suite, the
+ingestion scripts (`python -m ingestion.batch_load`) and the evaluation
+(`python -m genai.eval`), or serving the API with reload via
+`uvicorn api.main:app --reload`.
+
 Ollama stays on the host on purpose: a container on macOS gets no GPU access and
 would re-download ~10 GB of models. Containers reach it via `host.docker.internal`.
 
