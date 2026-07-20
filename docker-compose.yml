@@ -51,7 +51,7 @@ services:
       # ADC for dbt-bigquery (mounted read-only below).
       GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/gcloud/application_default_credentials.json
       GOOGLE_CLOUD_PROJECT: taxi-chat-data
-      OLLAMA_HOST: http://host.docker.internal:11434
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
       # Match the project's own dbt Dockerfile pin. (The DAG copies the mounted
       # dbt project into a writable temp dir before running, so dbt deps/target/
       # logs never need to write to the host-owned bind mount — portable to Linux.)
@@ -81,12 +81,15 @@ services:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
       GOOGLE_CLOUD_PROJECT: taxi-chat-data
-      OLLAMA_HOST: http://host.docker.internal:11434
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
     env_file:
       - .env
     volumes:
       # ADC read-only — the API queries BigQuery.
       - ~/.config/gcloud:/root/.config/gcloud:ro
+      # The Chroma index the RAG retriever reads lives here. Without this mount
+      # /health reports chroma_index: missing and answers come back context-free.
+      - ./data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
