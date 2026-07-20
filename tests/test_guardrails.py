@@ -1,4 +1,3 @@
-import pytest
 from google.api_core.exceptions import BadRequest, NotFound
 
 from genai.guardrails import validate
@@ -125,7 +124,9 @@ def test_appends_default_limit_when_missing():
 def test_accepts_parenthesized_select():
     """LLMs sometimes wrap the whole query in parens — still one read-only
     SELECT, must pass (sqlglot parses it as Subquery, not Select)."""
-    result = validate("(SELECT trip_key FROM `taxi-chat-data.marts.fct_trips` LIMIT 5)", bq_client=BQ())
+    result = validate(
+        "(SELECT trip_key FROM `taxi-chat-data.marts.fct_trips` LIMIT 5)", bq_client=BQ()
+    )
     assert result.ok
 
 

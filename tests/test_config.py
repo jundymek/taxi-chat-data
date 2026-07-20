@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from ingestion.config import load_config, Config
+from ingestion.config import Config, load_config
 
 
 def test_load_config_reads_env(monkeypatch):

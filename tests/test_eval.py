@@ -97,7 +97,12 @@ class _FakeRow:
 
 HAPPY_UPDATES = [
     {"retrieve": {"context": None, "attempts": 0, "refused": False, "rows": []}},
-    {"generate_sql": {"sql": "SELECT AVG(tip_amount) AS avg FROM `taxi-chat-data.marts.fct_trips`", "attempts": 1}},
+    {
+        "generate_sql": {
+            "sql": "SELECT AVG(tip_amount) AS avg FROM `taxi-chat-data.marts.fct_trips`",
+            "attempts": 1,
+        }
+    },
     {"validate": {"validation": None}},
     {"execute": {"rows": [{"avg": 4.16}], "scanned_bytes": 1000, "sql": "SELECT 1"}},
     {"summarize": {"answer": "4,16"}},
@@ -105,7 +110,10 @@ HAPPY_UPDATES = [
 
 
 def test_evaluate_case_correct_when_result_matches_reference():
-    case = EvalCase(question="Średni napiwek?", reference_sql="SELECT AVG(tip_amount) AS avg FROM `taxi-chat-data.marts.fct_trips`")
+    case = EvalCase(
+        question="Średni napiwek?",
+        reference_sql="SELECT AVG(tip_amount) AS avg FROM `taxi-chat-data.marts.fct_trips`",
+    )
     pipeline = FakePipeline(HAPPY_UPDATES)
     bq = FakeBQ([[{"avg": 4.160000002}]])  # reference execution
     result = evaluate_case(case, pipeline, bq)
@@ -161,8 +169,8 @@ def test_render_markdown_has_a_row_per_model():
 def _two_model_report():
     from genai.eval import EvalReport
     g = ModelReport("gemma4:latest", [CaseResult("q", True, True, 1, False, None)])
-    l = ModelReport("llama3.1:8b", [CaseResult("q", False, True, 2, False, None)])
-    return EvalReport([g, l], question_count=1)
+    llama = ModelReport("llama3.1:8b", [CaseResult("q", False, True, 2, False, None)])
+    return EvalReport([g, llama], question_count=1)
 
 
 def test_load_questions_parses_the_shipped_set():

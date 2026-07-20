@@ -20,6 +20,11 @@ Spec: `docs/superpowers/specs/2026-07-18-faza-6-eval-airflow-stream-merge-design
 1. `dags/dbt_transform_dag.py` defines an importable DAG `dag_id="dbt_transform"`
    with exactly two `BashOperator` tasks `dbt_run` and `dbt_test`, dependency
    `dbt_run >> dbt_test`, `schedule=None`, `catchup=False`.
+> **Historical note (Faza 7):** `docker-compose.airflow.yml` no longer exists. It
+> was merged into the root `docker-compose.yml` behind a profile — run Airflow with
+> `docker compose --profile airflow <cmd>`. The commands below are kept as the
+> record of what this task did at the time.
+
 2. `docker-compose.airflow.yml` — Airflow LocalExecutor + Postgres metadata DB,
    mounts `dags/` and `dbt/`, binds ADC read-only into the container (the proven
    Faza 2 pattern), installs `dbt-bigquery` in-container.

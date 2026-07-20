@@ -1,0 +1,11 @@
+# Extends the upstream default rule set rather than replacing it.
+[extend]
+useDefault = true
+
+# .env.example ships placeholder values (GCP_PROJECT_ID=your-project-id and
+# similar) that can trip generic-credential heuristics. Scope the exception to
+# that one path — never suppress a rule globally.
+[allowlist]
+paths = [
+  '''^\.env\.example$''',
+]

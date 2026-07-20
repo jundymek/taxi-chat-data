@@ -9,7 +9,9 @@ def test_schema_context_holds_prompt_ready_strings():
 
 def test_validation_result_defaults():
     ok = ValidationResult(ok=True, sql="SELECT 1", reason=None, estimated_bytes=123)
-    bad = ValidationResult(ok=False, sql="DROP TABLE x", reason="Tylko SELECT jest dozwolony.", estimated_bytes=None)
+    bad = ValidationResult(
+        ok=False, sql="DROP TABLE x", reason="Tylko SELECT jest dozwolony.", estimated_bytes=None
+    )
     assert ok.ok and not bad.ok
     assert isinstance(bad.reason, str)
 

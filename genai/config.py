@@ -1,4 +1,5 @@
 """Central configuration for the genai package. No secrets here — auth is ADC."""
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -7,7 +8,10 @@ CHROMA_DIR = DATA_DIR / "chroma"
 DBT_MODELS_DIR = REPO_ROOT / "dbt" / "models"
 EXAMPLES_PATH = Path(__file__).resolve().parent / "examples.yml"
 
-OLLAMA_BASE_URL = "http://localhost:11434"
+# Ollama always runs on the host, never in a container. Natively that is
+# localhost; from inside a container it is host.docker.internal, which compose
+# passes in via OLLAMA_BASE_URL. The default keeps the native dev loop unchanged.
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 GENERATION_MODEL = "gemma4:latest"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
 

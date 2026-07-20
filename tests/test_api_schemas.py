@@ -1,7 +1,11 @@
 import json
 
 from api.schemas import (
-    STAGE_DONE, STAGE_VALIDATE, Frame, Result, sse,
+    STAGE_DONE,
+    STAGE_VALIDATE,
+    Frame,
+    Result,
+    sse,
 )
 
 

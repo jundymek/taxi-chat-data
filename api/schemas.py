@@ -37,4 +37,4 @@ class Frame(BaseModel):
 
 def sse(frame: Frame) -> bytes:
     payload = frame.model_dump_json(exclude_none=True)
-    return f"event: stage\ndata: {payload}\n\n".encode("utf-8")
+    return f"event: stage\ndata: {payload}\n\n".encode()

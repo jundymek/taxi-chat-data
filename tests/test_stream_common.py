@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -13,8 +13,8 @@ from ingestion.stream_common import (
 
 SAMPLE_ROW = {
     "VendorID": 1,
-    "tpep_pickup_datetime": datetime(2023, 1, 1, 0, 32, 10, tzinfo=timezone.utc),
-    "tpep_dropoff_datetime": datetime(2023, 1, 1, 0, 40, 36, tzinfo=timezone.utc),
+    "tpep_pickup_datetime": datetime(2023, 1, 1, 0, 32, 10, tzinfo=UTC),
+    "tpep_dropoff_datetime": datetime(2023, 1, 1, 0, 40, 36, tzinfo=UTC),
     "passenger_count": 1.0,
     "trip_distance": 0.97,
     "RatecodeID": 1.0,

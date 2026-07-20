@@ -17,8 +17,16 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from api.schemas import (
-    STAGE_DONE, STAGE_ERROR, STAGE_EXECUTE, STAGE_GENERATE_SQL,
-    STAGE_RETRIEVE, STAGE_SUMMARIZE, STAGE_VALIDATE, Frame, Result, sse,
+    STAGE_DONE,
+    STAGE_ERROR,
+    STAGE_EXECUTE,
+    STAGE_GENERATE_SQL,
+    STAGE_RETRIEVE,
+    STAGE_SUMMARIZE,
+    STAGE_VALIDATE,
+    Frame,
+    Result,
+    sse,
 )
 from genai import config
 from genai.types import LLMError
@@ -105,6 +113,7 @@ def _check_chroma() -> str:
         if not Path(config.CHROMA_DIR).exists():
             return "missing"
         import chromadb
+
         from genai.indexer import EXAMPLES_COLLECTION, SCHEMA_COLLECTION
         client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
         for collection in (SCHEMA_COLLECTION, EXAMPLES_COLLECTION):

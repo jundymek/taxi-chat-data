@@ -22,7 +22,9 @@ def _reject(sql: str, reason: str, estimated_bytes: int | None = None) -> Valida
     return ValidationResult(ok=False, sql=sql, reason=reason, estimated_bytes=estimated_bytes)
 
 
-def validate(sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None) -> ValidationResult:
+def validate(
+    sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None
+) -> ValidationResult:
     try:
         statements = sqlglot.parse(sql, read="bigquery")
     except sqlglot.errors.SqlglotError as exc:  # ParseError, TokenError, ...
@@ -76,7 +78,9 @@ def validate(sql: str, *, max_bytes: int = config.MAX_SCAN_BYTES, bq_client=None
     from google.cloud.bigquery import QueryJobConfig
 
     try:
-        job = bq_client.query(final_sql, job_config=QueryJobConfig(dry_run=True, use_query_cache=False))
+        job = bq_client.query(
+            final_sql, job_config=QueryJobConfig(dry_run=True, use_query_cache=False)
+        )
     except (BadRequest, NotFound) as exc:
         # Parseable but invalid for BigQuery (hallucinated column/table etc.)
         # is a normal bad-SQL case, not an infrastructure failure.

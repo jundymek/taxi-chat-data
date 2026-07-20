@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from genai.indexer import format_model_doc, load_model_docs, load_examples
+from genai.indexer import format_model_doc, load_examples, load_model_docs
 
 MODELS_YML = """
 version: 2
