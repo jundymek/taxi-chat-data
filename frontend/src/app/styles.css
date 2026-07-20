@@ -1,136 +1,157 @@
 @import "tailwindcss";
+/* Self-hosted faces from direction 1C. The design links Google Fonts; bundling
+   avoids a render-blocking cross-origin request. Only the weights 1C actually
+   uses are loaded — Geist 400/500/600/700, JetBrains Mono 400/500/600 — and the
+   fontsource CSS sets font-display:swap, so text stays visible while loading. */
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
 
-/* Binding visual tokens from the OWNER-APPROVED mockup C1 (§ .c1). Declared
-   once here so Tailwind utilities (bg-line, text-ok, border-err, font-mono, …)
-   and the custom timeline layer below share the same palette. */
+/* Binding visual tokens from design direction 1C "Operations console"
+   (Kierunki.dc.html § #1c). A dense, status-first workshop palette: cool greys
+   for chrome, a single blue for data/actions, and semantic ok/err/run colours
+   for stream rows. Declared once here so Tailwind utilities (bg-surface,
+   text-accent, border-hair, font-mono, …) and the custom stream layer below
+   share the same values. */
 @theme {
-  --color-ink: #111111;
-  --color-paper: #ffffff;
-  --color-line: #fccc0a; /* yellow route line */
-  --color-ok: #00933c; /* green station / OK */
-  --color-err: #d0021b; /* red rejection */
+  /* Chrome + surfaces */
+  --color-shell: #f4f5f7; /* app background behind the panels */
+  --color-panel: #ffffff; /* cards, sidebar, ask box */
+  --color-subtle: #f8f9fb; /* table header / SQL gutter fill */
+  --color-code: #fcfcfd; /* SQL <pre> background */
+  --color-hair: #e2e4e9; /* default 1px border */
+  --color-hair-soft: #f0f1f4; /* inner row dividers */
+  --color-edge: #d4d8df; /* stronger border: the ask box */
 
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Text */
+  --color-ink: #191c22; /* primary text + primary button */
+  --color-ink-soft: #2e3440; /* code text, button hover */
+  --color-muted: #626a78; /* secondary text, chips */
+  /* Eyebrows, durations, captions. 1C draws these at #9aa1ad, but that is
+     2.6:1 on white — below WCAG AA (4.5:1) for the real text it carries here
+     (empty state, table headers, placeholder). Darkened to the lightest value
+     on the same hue axis that clears AA on panel/subtle/shell (4.91/4.67/4.51)
+     while staying clearly lighter than --color-muted, so 1C's three-step text
+     hierarchy survives. */
+  --color-faint: #687182;
+
+  /* Semantic */
+  --color-accent: #2e6be6; /* SQL keywords, bars, links */
+  --color-accent-deep: #1b4fb8; /* link hover */
+  --color-ok: #1a7f4e; /* completed stage */
+  --color-err: #c2382e; /* rejected stage */
+  --color-run: #b3720a; /* in-flight stage */
+  --color-brand: #f5c542; /* the "tc" mark */
+
+  /* Health pill — healthy (green) and degraded (amber) sets */
+  --color-well: #166b42;
+  --color-well-bg: #e9f6ef;
+  --color-well-line: #bfe5d2;
+  --color-well-dot: #1fa863;
+  --color-warn: #8a5a08;
+  --color-warn-bg: #fdf3e3;
+  --color-warn-line: #eed9ad;
+  --color-warn-dot: #dd9414;
+
+  --font-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
   margin: 0;
-  background: var(--color-paper);
+  background: var(--color-shell);
   color: var(--color-ink);
   font-family: var(--font-sans);
   line-height: 1.5;
 }
 
-/* ---- C1 metro stage-timeline (custom layer) ----
-   One continuous route line (`.timeline::before`) with the dots centred on it.
-   A wrapped rejection reason is a full-width `.why` that flows BELOW its row, so
-   it grows the row height without ever moving a dot off the line. */
-.timeline {
-  list-style: none;
-  margin: 26px 0 6px;
-  padding: 0 0 0 34px;
-  position: relative;
+/* JetBrains Mono ligates operators — it renders `>=` as `≥`, which misreads as
+   a different operator in SQL people copy and run. Show the real characters. */
+code,
+kbd,
+pre,
+samp {
+  font-variant-ligatures: none;
+}
+
+/* ---- 1C stream rows (custom layer) ----
+   The console's stage stream is a flat, dense ledger: a status glyph, a label,
+   a detail that flexes, and a right-aligned duration. No connecting line — in
+   1C the status glyph itself carries the state, so each row stays one grid
+   unit tall and many rows fit on screen at once. */
+.frame-row {
   display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-/* Continuous yellow line. Its centre sits at 6 + 8/2 = 10px from .timeline's
-   left edge — the same X as each dot's centre (34 padding − 30 + 12/2 = 10px) —
-   so dots ride exactly on the line. */
-.timeline::before {
-  content: "";
-  position: absolute;
-  left: 6px;
-  top: 4px;
-  bottom: 4px;
-  width: 8px;
-  background: var(--color-line);
-  border-radius: 4px;
-}
-/* When the last station is the pulsing pending one, stop the line at that dot's
-   centre instead of running past it to the container floor. The pending row is
-   a single label line, so its dot centre sits ~0.75em from the row top; ending
-   the line there keeps it from poking out below the hollow dot. */
-.timeline:has(.station.pending:last-child)::before {
-  bottom: calc(1.5rem - 0.75em);
-}
-.station {
-  position: relative;
-  font-size: 0.95rem;
-  display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-hair-soft);
+  font-size: 12px;
+  line-height: 1.5;
 }
-/* Green station dot, centred on the continuous line, anchored to the first
-   label line so a grown row never drifts it. */
-.station::before {
-  content: "";
-  position: absolute;
-  left: -30px;
-  top: 0.28em;
-  z-index: 1;
+.frame-row:last-child {
+  border-bottom: 0;
+}
+.frame-row .glyph {
   width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-ok);
-  border: 3px solid var(--color-ok);
-}
-.station.err::before {
-  background: var(--color-err);
-  border-color: var(--color-err);
-}
-/* Pending station: same size/weight as a completed dot, in a neutral grey so it
-   reads as "not done yet" without looking flimsy. Opaque fill covers the line
-   beneath it. */
-.station.pending::before {
-  background: #bbb;
-  border-color: #bbb;
-}
-.station .dots {
-  flex: 1;
-  border-bottom: 1px dotted #bbb;
-  transform: translateY(-4px);
-}
-.station .st {
+  flex: none;
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 0.75rem;
+  font-weight: 600;
+  font-size: 11px;
   color: var(--color-ok);
-  letter-spacing: 0.08em;
 }
-.station.err .st {
+.frame-row.err .glyph {
   color: var(--color-err);
 }
-.station .why {
-  /* Full-width so a multi-line reason flows below the row; indented to the text
-     band so the dot and line stay put. */
-  flex-basis: 100%;
-  margin-top: 2px;
-  font-size: 0.78rem;
+.frame-row.run .glyph {
+  color: var(--color-run);
+}
+.frame-row .lbl {
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--color-ink);
+}
+.frame-row .detail {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--color-muted);
+}
+.frame-row.err .detail {
   color: var(--color-err);
 }
-/* Pulsing pending station: the WHOLE row (dot + label) breathes while the next
-   stage runs. Named `station-pulse` (not `pulse`) to avoid colliding with
-   Tailwind's own `@keyframes pulse`. */
-.station.pending {
-  animation: station-pulse 1.2s ease-in-out infinite;
+.frame-row .dur {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-faint);
 }
-.station.pending .lbl {
-  color: #888;
+
+/* The in-flight row breathes. Named `station-pulse` (NOT `pulse`) to avoid
+   colliding with Tailwind's own `@keyframes pulse`. */
+.frame-row.run .glyph {
+  animation: station-pulse 1.1s ease-in-out infinite;
 }
 @keyframes station-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% {
+    opacity: 0.3;
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-  /* Not the pending row — it owns the continuous station-pulse animation. */
-  .station:not(.pending) { animation: arrive 0.2s ease-out; }
+  .frame-row:not(.run) {
+    animation: arrive 0.2s ease-out;
+  }
   @keyframes arrive {
-    from { opacity: 0; transform: translateY(4px); }
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .station.pending { animation: none; }
+  .frame-row.run .glyph {
+    animation: none;
+  }
 }

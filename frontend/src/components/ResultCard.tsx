@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ChatResult } from "../types";
 
 interface ResultCardProps {
@@ -22,79 +23,161 @@ export function formatScan(gb: number): string {
 }
 
 /**
- * C1 result card: ink-bordered panel with the Polish answer, metadata chips
- * (attempts / GB scanned / model), a collapsible SQL block, and the rows table.
- * A refusal renders the reason and no table. Presentational only; label logic
- * lives in the exported pure helpers above.
+ * The column to draw magnitude bars for, or null when bars would not inform.
+ * Picking the LAST fully-numeric column favours the aggregate in a typical
+ * `SELECT dimension, AVG(x)` shape.
+ */
+export function barColumn(rows: Record<string, unknown>[], columns: string[]): string | null {
+  // A single row has nothing to compare against — its bar would always be full
+  // width and read as a chart while carrying no information. Show numbers only.
+  if (rows.length < 2) return null;
+  const numeric = columns.filter((c) =>
+    rows.every((r) => typeof r[c] === "number" && Number.isFinite(r[c] as number)),
+  );
+  return numeric.length ? numeric[numeric.length - 1] : null;
+}
+
+/**
+ * Bar width as a CSS percentage, scaled against the largest magnitude in the
+ * column. Uses absolute values so negatives still render, and returns "0%" when
+ * every value is zero (no meaningful ratio) rather than dividing by zero.
+ */
+export function barWidth(value: number, values: number[]): string {
+  const peak = Math.max(...values.map((v) => Math.abs(v)));
+  if (!peak) return "0%";
+  return `${Math.round((Math.abs(value) / peak) * 100)}%`;
+}
+
+/** "Copy" control for the SQL block, confirming in place for two seconds. */
+function CopySql({ sql }: { sql: string }) {
+  const [copied, setCopied] = useState(false);
+  // Clear the confirmation on unmount too, so a timer never fires into a card
+  // that has already been replaced by the next question's result.
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      className="ml-auto cursor-pointer border-0 bg-transparent p-0 text-[10.5px] font-medium text-accent outline-none hover:text-accent-deep focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+      onClick={() => {
+        // Older/insecure contexts have no clipboard API; stay silent rather
+        // than throwing, since copying is a convenience, not the card's job.
+        void navigator.clipboard?.writeText(sql).then(
+          () => setCopied(true),
+          () => undefined,
+        );
+      }}
+    >
+      {copied ? "Skopiowano" : "Kopiuj"}
+    </button>
+  );
+}
+
+/**
+ * 1C result panel: the prose answer, metadata chips (attempts / GB / model), a
+ * dry-run-verified SQL block, and the rows table with inline magnitude bars.
+ * A refusal renders the reason and no table. Presentational only; the label,
+ * scan, and bar helpers above are pure and unit-tested.
  */
 export function ResultCard({ result }: ResultCardProps) {
   const columns = result.rows.length ? Object.keys(result.rows[0]) : [];
+  const visible = result.rows.slice(0, 50);
+  const bar = barColumn(visible, columns);
+  const barValues = bar ? visible.map((r) => r[bar] as number) : [];
   return (
-    <section className="mt-[22px] border-2 border-ink">
-      <header className="bg-ink px-[14px] py-2 text-[0.78rem] uppercase tracking-[0.12em] text-white">
-        Wynik kursu
-      </header>
-      <div className="px-[18px] py-4">
-        <p className="m-0 mb-3 text-[1.3rem] leading-[1.4]">{result.answer}</p>
+    <section className="mt-3.5 overflow-hidden rounded-lg border border-hair bg-panel">
+      <div className="px-4 pb-2.5 pt-3.5">
+        <p className="m-0 text-[14px] leading-[1.55] text-ink">{result.answer}</p>
         {result.refused && result.reason ? (
-          <p className="text-[0.9rem] text-err">{result.reason}</p>
+          <p className="mb-0 mt-2 text-[12.5px] leading-normal text-err">{result.reason}</p>
         ) : null}
-        <div className="mb-3 flex flex-wrap gap-2">
-          <span className="rounded-full border-[1.5px] border-line bg-line px-3 py-0.5 text-xs font-bold">
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <span className="rounded-[5px] border border-hair px-2 py-0.5 font-mono text-[10.5px] font-medium text-muted">
             {result.attempts} {result.attempts === 1 ? "próba" : "próby"}
           </span>
-          <span className="rounded-full border-[1.5px] border-ink px-3 py-0.5 text-xs font-bold">
+          <span className="rounded-[5px] border border-hair px-2 py-0.5 font-mono text-[10.5px] font-medium text-muted">
             {formatScan(result.scanned_gb)}
           </span>
-          <span className="rounded-full border-[1.5px] border-ink px-3 py-0.5 text-xs font-bold">
+          <span className="rounded-[5px] border border-hair px-2 py-0.5 font-mono text-[10.5px] font-medium text-muted">
             {result.model.split(":")[0]}
           </span>
         </div>
-        {result.sql ? (
-          <details>
-            <summary className="cursor-pointer text-[0.8rem] font-bold uppercase tracking-[0.06em]">
-              Użyty SQL
-            </summary>
-            <pre className="overflow-x-auto bg-[#f4f4f4] p-3 font-mono text-[0.8rem] leading-[1.5]">
-              {result.sql}
-            </pre>
-          </details>
-        ) : null}
-        {columns.length ? (
-          // A wide SELECT * (many columns) must scroll inside the card, not
-          // overflow and break its border — same pattern as the SQL <pre> above.
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full border-collapse text-[0.85rem] [font-variant-numeric:tabular-nums]">
+      </div>
+      {result.sql ? (
+        <>
+          <div className="flex items-center border-y border-hair bg-subtle px-4 py-1.5">
+            <span className="font-mono text-[10px] font-semibold tracking-[0.09em] text-faint">
+              WYGENEROWANY SQL · SPRAWDZONY DRY-RUNEM
+            </span>
+            <CopySql sql={result.sql} />
+          </div>
+          {/* Wrapped, not scrolled: this is a console for reading SQL, and a
+              horizontal scrollbar hides the tail of every long query. Wrapping
+              preserves the model's own newlines and indentation. */}
+          <pre className="m-0 whitespace-pre-wrap wrap-break-word bg-code px-4 py-3 font-mono text-[11.5px] leading-[1.65] text-ink-soft">
+            {result.sql}
+          </pre>
+        </>
+      ) : null}
+      {columns.length ? (
+        <div className="border-t border-hair">
+          {/* A wide SELECT * must scroll inside the panel, not overflow and
+              break its border — same rule as the SQL <pre> above. */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[12px] [font-variant-numeric:tabular-nums]">
               <thead>
-                <tr>
+                <tr className="bg-subtle">
                   {columns.map((c) => (
                     <th
                       key={c}
-                      className="whitespace-nowrap bg-ink px-2 py-[5px] text-left text-[0.75rem] tracking-[0.08em] text-white"
+                      className="whitespace-nowrap px-4 py-[7px] text-left font-mono text-[10px] font-semibold tracking-[0.07em] text-faint uppercase"
                     >
                       {columnLabel(c, columns)}
                     </th>
                   ))}
+                  {/* Claims the leftover width so the label/value columns stay
+                      shrink-to-fit and the bars share one common track. */}
+                  {bar ? <th className="w-full min-w-[120px] px-4" /> : null}
                 </tr>
               </thead>
               <tbody>
-                {result.rows.slice(0, 50).map((row, i) => (
-                  <tr key={i}>
+                {visible.map((row, i) => (
+                  <tr key={i} className="border-t border-hair-soft">
                     {columns.map((c) => (
                       <td
                         key={c}
-                        className="whitespace-nowrap border-b border-[#ddd] px-2 py-1.5 font-mono"
+                        className={`whitespace-nowrap px-4 py-1.5 ${
+                          c === bar ? "text-right font-mono font-medium text-ink" : "text-ink"
+                        }`}
                       >
                         {String(row[c])}
                       </td>
                     ))}
+                    {bar ? (
+                      <td className="w-full px-4 py-1.5">
+                        <span className="block h-2 rounded-sm bg-[#eef1f6]">
+                          <span
+                            className="block h-2 rounded-sm bg-accent"
+                            style={{ width: barWidth(row[bar] as number, barValues) }}
+                          />
+                        </span>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        ) : null}
-      </div>
+          <div className="border-t border-hair-soft px-4 py-[7px] text-[11px] text-faint">
+            {result.rows.length > 50
+              ? `${visible.length} z ${result.rows.length} wierszy`
+              : `${result.rows.length} ${result.rows.length === 1 ? "wiersz" : "wierszy"} · pełny wynik`}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
