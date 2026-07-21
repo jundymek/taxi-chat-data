@@ -112,6 +112,66 @@ To test dekodowania wielobajtowego UTF-8 na granicy chunków SSE. Podmiana na
 ASCII wyłączyłaby go po cichu — asercja dalej by przechodziła, ale nie
 sprawdzałaby już niczego istotnego. Znak nie-ASCII **jest** tu przedmiotem testu.
 
+## Co wyszło dopiero przy realnym użyciu
+
+Po odpaleniu aplikacji pytanie „What was avarage tip in january 2023?" poleciało
+trzy razy pod rząd na guardrails. Objawy wyglądały na jeden błąd, a były cztery
+niezależne przyczyny:
+
+| Objaw | Przyczyna |
+|---|---|
+| Polskie komunikaty guardrails w UI | proces API działał od 3 dni — serwował kod sprzed tłumaczenia |
+| `cleanReason()` nie obcinało Job ID | front szukał `"BigQuery rejected the query:"`, backend słał polski prefiks |
+| `Name tip not found inside t` | RAG widział 5 z 15 kolumn `fct_trips` |
+| RAG nie podsunął dobrego przykładu | indeks Chroma był o dzień starszy niż przetłumaczone `examples.yml` |
+
+### Lekcja 1: dokumentacja dbt jest kontekstem dla LLM-a, nie tylko dla ludzi
+
+`genai/indexer.py` czyta `_marts__models.yml` i to **jest** schemat, który widzi
+model. A ten plik dokumentował tylko kolumny mające testy dbt — czyli klucze i
+relacje. Wszystkie miary (`tip_amount`, `fare_amount`, `total_amount`,
+`trip_distance`…) nie miały testów, więc nikt ich nie opisał.
+
+Efekt: model dostawał listę 5 kolumn, wśród których nie było żadnej, o którą
+pytają użytkownicy. Do tego opis tabeli głosił `"Measures: fare, tip, tolls"` —
+co czyta się jak lista kolumn i stąd wzięło się `t.tip`.
+
+**Wniosek:** w projekcie z RAG-em nad warehousem „udokumentuj kolumnę" przestaje
+być kwestią higieny, a staje się warunkiem poprawności. Kryterium „czy ta kolumna
+ma test?" jest tu bez znaczenia — liczy się „czy ktoś o nią zapyta?".
+
+### Lekcja 2: błąd potrafi się ukrywać za innym mechanizmem
+
+Ta luka istniała **przed** tłumaczeniem, ale jej nie było widać: polskie przykłady
+few-shot zawierały gotowe `AVG(f.tip_amount)`, więc model kopiował prawidłową
+nazwę z przykładu zamiast czytać ją ze schematu. Dopiero gdy angielskie pytania
+trafiły na indeks pełen polskich przykładów, podpórka zniknęła i luka wyszła.
+
+Czyli RAG maskował braki w dokumentacji schematu. Zmiana języka nie stworzyła
+błędu — odsłoniła go.
+
+### Lekcja 3: po zmianie danych trzeba przebudować indeks
+
+`data/chroma` to zmaterializowana kopia `examples.yml` i opisów dbt. Edycja
+źródeł **nie** aktualizuje indeksu — trzeba wywołać `python -m genai.indexer`.
+Porównanie dat plików to pierwsze, co warto sprawdzić, gdy RAG zwraca dziwne
+wyniki:
+
+```bash
+stat -f '%Sm %N' data/chroma genai/examples.yml
+```
+
+### Lekcja 4: restartuj proces po zmianie kodu
+
+`uvicorn --reload` przeładowuje zmiany tylko w procesie, który *już działa*.
+Proces uruchomiony 3 dni wcześniej pamiętał stan sprzed tłumaczenia. Zanim
+zacznie się debugować „dlaczego moja zmiana nie działa", warto sprawdzić, czy
+proces w ogóle ją widzi:
+
+```bash
+lsof -ti:8000 | while read p; do ps -o pid,lstart -p $p | tail -1; done
+```
+
 ## Efekt
 
 - `pytest`: 105 passed
