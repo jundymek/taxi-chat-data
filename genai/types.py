@@ -18,5 +18,5 @@ class ValidationResult:
     """Guardrail verdict for one SQL statement."""
     ok: bool
     sql: str                        # possibly amended (e.g. LIMIT appended)
-    reason: str | None              # Polish, user-facing / retry feedback
+    reason: str | None              # user-facing / retry feedback
     estimated_bytes: int | None     # from the BigQuery dry-run

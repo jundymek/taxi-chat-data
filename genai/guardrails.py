@@ -7,8 +7,8 @@ Order of gates:
 4. Enforce a LIMIT (append config.DEFAULT_LIMIT when missing).
 5. BigQuery dry-run — reject when the estimated scan exceeds max_bytes.
 
-Reasons are in Polish: they go straight to the user (or back to the model as
-retry feedback).
+Reasons are user-facing: they go straight to the user (or back to the model as
+retry feedback), so they read as English prose, not error codes.
 """
 import sqlglot
 from sqlglot import exp

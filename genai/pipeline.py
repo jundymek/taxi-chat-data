@@ -1,7 +1,7 @@
 """LangGraph pipeline: retrieve → generate_sql → validate ⇄ retry → execute → summarize.
 
 The graph earns its keep through the validate→generate_sql back-edge: on a
-guardrail rejection the model gets the Polish reason as feedback and tries
+guardrail rejection the model gets the rejection reason as feedback and tries
 again (config.MAX_SQL_ATTEMPTS total attempts).
 """
 from functools import partial

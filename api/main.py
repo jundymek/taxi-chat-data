@@ -46,7 +46,7 @@ def _frames_for(node: str, state: dict) -> list[Frame]:
         return [Frame(stage=STAGE_VALIDATE, ok=v.ok,
                       reason=None if v.ok else v.reason)]
     if node == "execute":
-        # execute finished; the pipeline is now writing the Polish answer.
+        # execute finished; the pipeline is now writing the prose answer.
         return [Frame(stage=STAGE_EXECUTE), Frame(stage=STAGE_SUMMARIZE)]
     return []  # summarize / refuse completions are represented by `done`
 

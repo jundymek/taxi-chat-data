@@ -8,7 +8,12 @@ SYSTEM_PROMPT = (
     "Return exactly ONE standard-SQL SELECT statement inside a ```sql fence. "
     "Use ONLY the tables and columns provided in the context, always fully "
     "qualified as `taxi-chat-data.<dataset>.<table>`. Never modify data. "
-    "The user's question is in Polish."
+    # The question may arrive in any language (the eval suite is Polish, the UI
+    # is English), so state that rather than naming one — SQL is the output
+    # either way. Naming a single language made the prompt wrong for every
+    # other one.
+    "The user's question may be in any language; the SQL you return must not "
+    "depend on which."
 )
 
 _PROMPT_TEMPLATE = """Schema context:

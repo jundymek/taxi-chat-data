@@ -342,7 +342,7 @@ Kontrakt wyjścia: [`SchemaContext`](../../genai/types.py#L10).
 
 ## Krok 8 — Pytanie → SQL
 
-**Plik:** [genai/nl2sql.py](../../genai/nl2sql.py) · `generate_sql` ([:48](../../genai/nl2sql.py#L48))
+**Plik:** [genai/nl2sql.py](../../genai/nl2sql.py) · `generate_sql` ([:53](../../genai/nl2sql.py#L53))
 **Wchodzi:** pytanie + `SchemaContext` · **Wychodzi:** tekst SQL
 
 Trzy proste funkcje: `build_prompt` skleja prompt, model generuje odpowiedź,
@@ -350,18 +350,22 @@ Trzy proste funkcje: `build_prompt` skleja prompt, model generuje odpowiedź,
 
 - [`SYSTEM_PROMPT` (:6)](../../genai/nl2sql.py#L6) — instrukcja: dokładnie jeden
   `SELECT`, w bloku ```sql, tylko z podanych tabel, zawsze w pełni kwalifikowany.
-- [`extract_sql` (:40)](../../genai/nl2sql.py#L40) — próbuje ```sql, potem
+- [`extract_sql` (:45)](../../genai/nl2sql.py#L45) — próbuje ```sql, potem
   dowolnego bloku ```, a na końcu bierze całą odpowiedź. Modele lokalne bywają
   niekonsekwentne w formatowaniu, więc to jest świadoma **kaskada awaryjna**.
-- [`error_feedback` (:25)](../../genai/nl2sql.py#L25) — jeśli poprzednia próba
+- [`error_feedback` (:30)](../../genai/nl2sql.py#L30) — jeśli poprzednia próba
   została odrzucona, powód wchodzi do promptu. Tego używa pętla z kroku 10.
 
-**Uwaga o niespójności w kodzie:** `SYSTEM_PROMPT` kończy się zdaniem *„The
-user's question is in Polish"*, podczas gdy prompt streszczający
-([pipeline.py:15-20](../../genai/pipeline.py#L15)) każe odpowiadać w języku
-pytania, a UI jest po angielsku. To pozostałość po czasach, gdy aplikacja była
-polska. Nie psuje działania (dotyczy generowania SQL-a, nie odpowiedzi), ale
-jeśli rekruter to wypatrzy — to jest prawdziwy drobny dług, nie feature.
+**Kwestia języka — warto umieć wyjaśnić.** Prompt mówi wprost, że pytanie może
+przyjść w dowolnym języku i że SQL nie ma od tego zależeć
+([linie 11-16](../../genai/nl2sql.py#L11)). Wcześniej stało tam „The user's
+question is in Polish" — pozostałość po czasach, gdy aplikacja była polska.
+Zdanie było już nieprawdziwe (UI jest po angielsku), a przy okazji zbędne:
+model i tak generuje SQL, nie prozę. Podział ról jest taki: **generowanie SQL-a
+jest językowo neutralne**, a dopiero prompt streszczający
+([pipeline.py:15-20](../../genai/pipeline.py#L15)) pilnuje, żeby odpowiedź
+wróciła w języku pytania. Zestaw ewaluacyjny nadal jest po polsku — i to jest
+teraz test tej neutralności, a nie założenie wpisane w prompt.
 
 ---
 

@@ -30,8 +30,8 @@ class Frame(BaseModel):
     stage: str
     attempt: int | None = None      # generate_sql frames
     ok: bool | None = None          # validate frames
-    reason: str | None = None       # validate frames when ok is False (Polish)
-    message: str | None = None      # error frames (Polish)
+    reason: str | None = None       # validate frames when ok is False
+    message: str | None = None      # error frames
     result: Result | None = None    # done frames
 
 
