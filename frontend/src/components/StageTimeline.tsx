@@ -5,37 +5,37 @@ interface StageTimelineProps {
   running: boolean;
 }
 
-// Polish user-facing labels per stage (direction 1C keeps C1's wording).
+// User-facing labels per stage (direction 1C keeps C1's wording).
 const LABELS: Record<string, (f: Frame) => string> = {
-  retrieve: () => "Kontekst schematu",
-  generate_sql: (f) => `SQL — próba ${f.attempt ?? 1}`,
-  validate: () => "Guardraile",
-  execute: () => "BigQuery — wykonanie",
-  summarize: () => "Piszę odpowiedź",
+  retrieve: () => "Schema context",
+  generate_sql: (f) => `SQL — attempt ${f.attempt ?? 1}`,
+  validate: () => "Guardrails",
+  execute: () => "BigQuery — execution",
+  summarize: () => "Writing answer",
 };
 
 // Label of the stage EXPECTED next, shown on the pulsing in-flight row.
 const NEXT_LABEL: Record<string, string> = {
-  retrieve: "Generowanie SQL",
-  generate_sql: "Guardraile",
-  validate: "BigQuery — wykonanie", // ok:true → execute
-  execute: "Piszę odpowiedź",
-  summarize: "Piszę odpowiedź",
+  retrieve: "Generating SQL",
+  generate_sql: "Guardrails",
+  validate: "BigQuery — execution", // ok:true → execute
+  execute: "Writing answer",
+  summarize: "Writing answer",
 };
 
 /** Predict the label of the next stage from the last completed frame.
  *  A failed validate loops back to generate_sql (a retry). */
 export function nextStageLabel(frames: Frame[]): string {
   const last = frames[frames.length - 1];
-  if (!last) return "Łączenie…";
-  if (last.stage === "validate" && last.ok === false) return "Generowanie SQL";
-  return NEXT_LABEL[last.stage] ?? "Piszę odpowiedź";
+  if (!last) return "Connecting…";
+  if (last.stage === "validate" && last.ok === false) return "Generating SQL";
+  return NEXT_LABEL[last.stage] ?? "Writing answer";
 }
 
 /** Strip the raw BigQuery dry-run wrapper (POST URL + Job ID/Location tail),
  *  keeping the substance. Other guardrail reasons pass through unchanged. */
 export function cleanReason(reason: string): string {
-  const WRAPPER = "BigQuery odrzucił zapytanie:";
+  const WRAPPER = "BigQuery rejected the query:";
   if (!reason.startsWith(WRAPPER)) return reason;
   let body = reason.slice(WRAPPER.length);
   // Drop the leading "POST https://…jobs?prettyPrint=false:" segment.
@@ -78,7 +78,7 @@ export function StageTimeline({ frames, running }: StageTimelineProps) {
               </span>
               <span className="lbl">{LABELS[frame.stage]?.(frame) ?? frame.stage}</span>
               <span className="detail">{frameDetail(frame)}</span>
-              <span className="dur">{rejected ? "ODRZUCONE" : "OK"}</span>
+              <span className="dur">{rejected ? "REJECTED" : "OK"}</span>
             </li>
           );
         })}

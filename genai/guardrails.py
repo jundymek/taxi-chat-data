@@ -28,17 +28,17 @@ def validate(
     try:
         statements = sqlglot.parse(sql, read="bigquery")
     except sqlglot.errors.SqlglotError as exc:  # ParseError, TokenError, ...
-        return _reject(sql, f"Nie udało się sparsować SQL: {exc}")
+        return _reject(sql, f"Could not parse the SQL: {exc}")
 
     statements = [s for s in statements if s is not None]
     if len(statements) != 1:
-        return _reject(sql, "Dozwolone jest dokładnie jedno zapytanie SQL.")
+        return _reject(sql, "Exactly one SQL statement is allowed.")
 
     statement = statements[0]
     while isinstance(statement, (exp.Subquery, exp.Paren)):
         statement = statement.this  # unwrap harmless outer parentheses
     if not isinstance(statement, (exp.Select, exp.Union)):
-        return _reject(sql, "Dozwolone są wyłącznie zapytania SELECT (odczyt danych).")
+        return _reject(sql, "Only SELECT queries (read-only) are allowed.")
 
     # Scope-aware resolution: build_scope maps each source to what it really
     # is — CTE references resolve to their scope, real tables stay exp.Table.
@@ -56,14 +56,14 @@ def validate(
             # default — require `project.dataset.table`, always.
             return _reject(
                 sql,
-                f"Tabela {table.sql(dialect='bigquery')} musi być w pełni kwalifikowana "
-                f"jako `{config.BQ_PROJECT}.<dataset>.<tabela>`.",
+                f"Table {table.sql(dialect='bigquery')} must be fully qualified "
+                f"as `{config.BQ_PROJECT}.<dataset>.<table>`.",
             )
         if table.db not in config.ALLOWED_DATASETS:
             shown = f"{table.db}.{table.name}" if table.db else table.name
             return _reject(
                 sql,
-                f"Tabela {shown} jest poza dozwolonymi zbiorami danych "
+                f"Table {shown} is outside the allowed datasets "
                 f"({', '.join(sorted(config.ALLOWED_DATASETS))}).",
             )
 
@@ -84,13 +84,13 @@ def validate(
     except (BadRequest, NotFound) as exc:
         # Parseable but invalid for BigQuery (hallucinated column/table etc.)
         # is a normal bad-SQL case, not an infrastructure failure.
-        return _reject(final_sql, f"BigQuery odrzucił zapytanie: {exc.message or exc}")
+        return _reject(final_sql, f"BigQuery rejected the query: {exc.message or exc}")
     estimated = job.total_bytes_processed
     if estimated is not None and estimated > max_bytes:
         return _reject(
             final_sql,
-            f"Zapytanie przeskanowałoby ~{estimated / 1e9:.2f} GB "
-            f"(limit: {max_bytes / 1e9:.2f} GB). Doprecyzuj pytanie.",
+            f"The query would scan ~{estimated / 1e9:.2f} GB "
+            f"(limit: {max_bytes / 1e9:.2f} GB). Please narrow the question.",
             estimated_bytes=estimated,
         )
 

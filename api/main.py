@@ -82,7 +82,7 @@ def stream_chat(get_pipeline, question: str) -> Iterator[bytes]:
         yield sse(Frame(stage=STAGE_ERROR, message=str(exc)))
         return
     except Exception as exc:  # infra failure mid-stream — still end the protocol
-        yield sse(Frame(stage=STAGE_ERROR, message=f"Nieoczekiwany błąd: {exc}"))
+        yield sse(Frame(stage=STAGE_ERROR, message=f"Unexpected error: {exc}"))
         return
     yield sse(_done_frame(state))
 

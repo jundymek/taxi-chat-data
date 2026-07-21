@@ -12,7 +12,7 @@ interface QuestionFormProps {
   onAsk: (question: string) => void;
 }
 
-/** The 1C ask box: a white panel with a flush dark "Zapytaj" button. */
+/** The 1C ask box: a white panel with a flush dark "Ask" button. */
 export function QuestionForm({ disabled, preset, onAsk }: QuestionFormProps) {
   const [question, setQuestion] = useState("");
   // Keyed on the pick id, not the text: typing is never clobbered until the
@@ -37,8 +37,8 @@ export function QuestionForm({ disabled, preset, onAsk }: QuestionFormProps) {
         className="min-w-0 flex-1 border-0 bg-transparent px-3.5 py-[11px] text-[13.5px] text-ink outline-none placeholder:text-faint"
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
-        placeholder="Zadaj pytanie o przejazdy taxi…"
-        aria-label="Pytanie"
+        placeholder="Ask a question about taxi trips…"
+        aria-label="Question"
       />
       {/* Disabled uses an explicit colour pair, not opacity: fading white on
           near-black drops the label to ~1.5:1, unreadable while you wait. */}
@@ -47,7 +47,7 @@ export function QuestionForm({ disabled, preset, onAsk }: QuestionFormProps) {
         type="submit"
         disabled={disabled || !question.trim()}
       >
-        Zapytaj
+        Ask
       </button>
     </form>
   );

@@ -6,7 +6,8 @@ from api.main import create_app
 from genai.types import ValidationResult
 
 VAL_OK = ValidationResult(ok=True, sql="SELECT 1 LIMIT 1", reason=None, estimated_bytes=512)
-VAL_BAD = ValidationResult(ok=False, sql="DROP x", reason="Tylko SELECT.", estimated_bytes=None)
+SELECT_ONLY = "Only SELECT queries (read-only) are allowed."
+VAL_BAD = ValidationResult(ok=False, sql="DROP x", reason=SELECT_ONLY, estimated_bytes=None)
 
 
 class FakePipeline:
@@ -23,7 +24,7 @@ class FakePipeline:
             raise self.error
 
 
-def _frames(client, question="Ile kursów?"):
+def _frames(client, question="How many trips?"):
     with client.stream("POST", "/chat", json={"question": question}) as resp:
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/event-stream")
@@ -37,7 +38,7 @@ HAPPY = [
     {"generate_sql": {"sql": "SELECT 1", "attempts": 1}},
     {"validate": {"validation": VAL_OK}},
     {"execute": {"rows": [{"c": 5}], "scanned_bytes": 48_000_000, "sql": VAL_OK.sql}},
-    {"summarize": {"answer": "Pięć kursów."}},
+    {"summarize": {"answer": "Five trips."}},
 ]
 
 
@@ -49,7 +50,7 @@ def test_happy_path_emits_ordered_frames_and_done():
     assert frames[1]["attempt"] == 1
     assert frames[2]["ok"] is True and "reason" not in frames[2]
     done = frames[-1]["result"]
-    assert done == {"answer": "Pięć kursów.", "sql": "SELECT 1 LIMIT 1",
+    assert done == {"answer": "Five trips.", "sql": "SELECT 1 LIMIT 1",
                     "rows": [{"c": 5}], "scanned_gb": 0.048, "attempts": 1,
                     "refused": False, "model": done["model"]}
 
@@ -68,7 +69,9 @@ RETRY = [
 def test_retry_emits_two_validate_frames_with_reason_on_failure():
     frames = _frames(TestClient(create_app(lambda: FakePipeline(RETRY))))
     validates = [f for f in frames if f["stage"] == "validate"]
-    assert validates[0] == {"stage": "validate", "ok": False, "reason": "Tylko SELECT."}
+    assert validates[0] == {
+        "stage": "validate", "ok": False,
+        "reason": SELECT_ONLY}
     assert validates[1]["ok"] is True
     assert frames[-1]["result"]["attempts"] == 2
 
@@ -77,7 +80,7 @@ REFUSAL = [
     {"retrieve": {"context": None, "attempts": 0, "refused": False, "rows": []}},
     {"generate_sql": {"sql": "DROP x", "attempts": 3}},
     {"validate": {"validation": VAL_BAD, "error_feedback": VAL_BAD.reason}},
-    {"refuse": {"refused": True, "answer": "Nie umiem bezpiecznie odpowiedzieć."}},
+    {"refuse": {"refused": True, "answer": "I can't answer that safely."}},
 ]
 
 
@@ -86,7 +89,7 @@ def test_refusal_is_done_with_refused_true_not_error():
     done = frames[-1]
     assert done["stage"] == "done"
     assert done["result"]["refused"] is True
-    assert done["result"]["reason"] == "Tylko SELECT."
+    assert done["result"]["reason"] == SELECT_ONLY
     assert done["result"]["rows"] == []
     assert not any(f["stage"] == "error" for f in frames)
 
@@ -94,7 +97,7 @@ def test_refusal_is_done_with_refused_true_not_error():
 def test_midstream_exception_yields_terminal_error_frame():
     from genai.types import LLMError
     client = TestClient(create_app(
-        lambda: FakePipeline(HAPPY[:2], error=LLMError("Ollama nie odpowiada"))))
+        lambda: FakePipeline(HAPPY[:2], error=LLMError("Ollama is not responding"))))
     frames = _frames(client)
     assert frames[-1]["stage"] == "error"
     assert "Ollama" in frames[-1]["message"]

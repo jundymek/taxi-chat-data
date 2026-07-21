@@ -7,7 +7,7 @@ import App from "../app/App";
  *  stream, and a completed request leaves the ask box enabled for the next. */
 function sseResponse() {
   const frame =
-    'event: stage\ndata: {"stage":"done","result":{"answer":"Gotowe.","sql":"",' +
+    'event: stage\ndata: {"stage":"done","result":{"answer":"Done.","sql":"",' +
     '"rows":[],"scanned_gb":0.01,"attempts":1,"refused":false,"model":"gemma4"}}\n\n';
   return new Response(
     new ReadableStream({
@@ -21,11 +21,11 @@ function sseResponse() {
 }
 
 async function ask(question: string) {
-  const field = screen.getByLabelText("Pytanie");
+  const field = screen.getByLabelText("Question");
   await userEvent.clear(field);
   await userEvent.type(field, question);
-  await userEvent.click(screen.getByRole("button", { name: "Zapytaj" }));
-  await waitFor(() => expect(screen.getByRole("button", { name: "Zapytaj" })).toBeEnabled());
+  await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Ask" })).toBeEnabled());
 }
 
 describe("App session rail", () => {
@@ -47,34 +47,34 @@ describe("App session rail", () => {
 
   it("records each asked question, newest first", async () => {
     render(<App />);
-    await ask("Ile kursów wczoraj?");
-    await ask("Średnia opłata?");
-    const rail = screen.getAllByRole("button", { name: /kursów|opłata/ });
-    expect(rail.map((b) => b.textContent)).toEqual(["Średnia opłata?", "Ile kursów wczoraj?"]);
+    await ask("How many trips yesterday?");
+    await ask("Average fare?");
+    const rail = screen.getAllByRole("button", { name: /trips|fare/ });
+    expect(rail.map((b) => b.textContent)).toEqual(["Average fare?", "How many trips yesterday?"]);
   });
 
   it("does not stack a repeat of the most recent question", async () => {
     render(<App />);
-    await ask("Ile kursów wczoraj?");
-    await ask("Ile kursów wczoraj?");
-    expect(screen.getAllByRole("button", { name: "Ile kursów wczoraj?" })).toHaveLength(1);
+    await ask("How many trips yesterday?");
+    await ask("How many trips yesterday?");
+    expect(screen.getAllByRole("button", { name: "How many trips yesterday?" })).toHaveLength(1);
   });
 
   it("refills the ask box from a picked session", async () => {
     render(<App />);
-    await ask("Ile kursów wczoraj?");
-    await ask("Średnia opłata?");
-    await userEvent.click(screen.getByRole("button", { name: "Ile kursów wczoraj?" }));
-    expect(screen.getByLabelText("Pytanie")).toHaveValue("Ile kursów wczoraj?");
+    await ask("How many trips yesterday?");
+    await ask("Average fare?");
+    await userEvent.click(screen.getByRole("button", { name: "How many trips yesterday?" }));
+    expect(screen.getByLabelText("Question")).toHaveValue("How many trips yesterday?");
   });
 
   it("reloads the active session's text over an edit when re-picked", async () => {
     render(<App />);
-    await ask("Ile kursów wczoraj?");
-    const field = screen.getByLabelText("Pytanie");
+    await ask("How many trips yesterday?");
+    const field = screen.getByLabelText("Question");
     await userEvent.clear(field);
-    await userEvent.type(field, "zmienione");
-    await userEvent.click(screen.getByRole("button", { name: "Ile kursów wczoraj?" }));
-    expect(field).toHaveValue("Ile kursów wczoraj?");
+    await userEvent.type(field, "edited");
+    await userEvent.click(screen.getByRole("button", { name: "How many trips yesterday?" }));
+    expect(field).toHaveValue("How many trips yesterday?");
   });
 });

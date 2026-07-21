@@ -111,7 +111,7 @@ HAPPY_UPDATES = [
 
 def test_evaluate_case_correct_when_result_matches_reference():
     case = EvalCase(
-        question="Średni napiwek?",
+        question="What is the average tip?",
         reference_sql="SELECT AVG(tip_amount) AS avg FROM `taxi-chat-data.marts.fct_trips`",
     )
     pipeline = FakePipeline(HAPPY_UPDATES)
@@ -136,12 +136,12 @@ REFUSAL_UPDATES = [
     {"retrieve": {"context": None, "attempts": 0, "refused": False, "rows": []}},
     {"generate_sql": {"sql": "DROP TABLE x", "attempts": 3}},
     {"validate": {"validation": None}},
-    {"refuse": {"refused": True, "answer": "Nie umiem."}},
+    {"refuse": {"refused": True, "answer": "I can't answer that."}},
 ]
 
 
 def test_evaluate_case_counts_refusal_and_is_correct_when_expected():
-    case = EvalCase(question="Usuń dane", reference_sql="SELECT 1", expects_refusal=True)
+    case = EvalCase(question="Delete the data", reference_sql="SELECT 1", expects_refusal=True)
     pipeline = FakePipeline(REFUSAL_UPDATES)
     bq = FakeBQ([])  # reference never executed on an expected refusal
     result = evaluate_case(case, pipeline, bq)
@@ -151,7 +151,7 @@ def test_evaluate_case_counts_refusal_and_is_correct_when_expected():
 
 
 def test_evaluate_case_unexpected_refusal_is_incorrect():
-    case = EvalCase(question="Ile kursów?", reference_sql="SELECT 1")
+    case = EvalCase(question="How many trips?", reference_sql="SELECT 1")
     pipeline = FakePipeline(REFUSAL_UPDATES)
     bq = FakeBQ([])
     result = evaluate_case(case, pipeline, bq)

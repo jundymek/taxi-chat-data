@@ -21,7 +21,7 @@ models:
 
 EXAMPLES_YML = """
 examples:
-  - question: "Ile było przejazdów?"
+  - question: "How many trips were there?"
     sql: "SELECT COUNT(*) AS trips FROM `taxi-chat-data.marts.fct_trips`"
 """
 
@@ -57,6 +57,6 @@ def test_load_examples_formats_question_sql_pairs(tmp_path: Path):
     assert len(examples) == 1
     assert examples[0]["id"] == "example-1"
     assert examples[0]["text"] == (
-        "QUESTION: Ile było przejazdów?\n"
+        "QUESTION: How many trips were there?\n"
         "SQL: SELECT COUNT(*) AS trips FROM `taxi-chat-data.marts.fct_trips`"
     )

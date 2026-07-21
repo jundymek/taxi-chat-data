@@ -11,7 +11,7 @@ export async function* streamChat(question: string, signal?: AbortSignal) {
     signal,
   });
   if (!response.ok || !response.body) {
-    throw new Error(`Serwer odpowiedział błędem (${response.status}).`);
+    throw new Error(`The server returned an error (${response.status}).`);
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

@@ -4,23 +4,25 @@ from genai.types import SchemaContext
 CTX = SchemaContext(
     tables=["Table marts.fct_trips: trips fact"],
     examples=[
-        "QUESTION: Ile było przejazdów?\n"
+        "QUESTION: How many trips were there?\n"
         "SQL: SELECT COUNT(*) FROM `taxi-chat-data.marts.fct_trips`"
     ],
 )
 
 
 def test_build_prompt_contains_question_context_and_examples():
-    prompt = build_prompt("Ile było kursów?", CTX)
-    assert "Ile było kursów?" in prompt
+    prompt = build_prompt("How many trips?", CTX)
+    assert "How many trips?" in prompt
     assert "Table marts.fct_trips" in prompt
-    assert "QUESTION: Ile było przejazdów?" in prompt
+    assert "QUESTION: How many trips were there?" in prompt
 
 
 def test_build_prompt_includes_error_feedback_on_retry():
-    prompt = build_prompt("Ile?", CTX, error_feedback="Tabela raw.trips jest poza allowlistą")
+    prompt = build_prompt(
+        "How many?", CTX, error_feedback="Table raw.trips is outside the allowlist"
+    )
     assert "raw.trips" in prompt
-    assert "poprzednia próba" in prompt.lower() or "previous attempt" in prompt.lower()
+    assert "previous attempt" in prompt.lower()
 
 
 def test_extract_sql_from_fenced_block():
@@ -44,6 +46,6 @@ def test_generate_sql_calls_llm_and_extracts():
             return "```sql\nSELECT COUNT(*) FROM `taxi-chat-data.marts.fct_trips`\n```"
 
     llm = FakeLLM()
-    sql = generate_sql(llm, "Ile było kursów?", CTX)
+    sql = generate_sql(llm, "How many trips?", CTX)
     assert sql == "SELECT COUNT(*) FROM `taxi-chat-data.marts.fct_trips`"
     assert llm.system is not None and "BigQuery" in llm.system

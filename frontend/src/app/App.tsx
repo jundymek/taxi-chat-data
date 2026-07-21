@@ -51,7 +51,7 @@ export default function App() {
       <main className="min-w-0 flex-1 px-[22px] pb-6 pt-[18px]">
         <div className="mx-auto max-w-[760px]">
           <div className="mb-3.5 flex items-center gap-2.5">
-            <h1 className="m-0 text-[13px] font-semibold text-ink">Nowe pytanie</h1>
+            <h1 className="m-0 text-[13px] font-semibold text-ink">New question</h1>
             <HealthBar state={health} />
           </div>
           <QuestionForm

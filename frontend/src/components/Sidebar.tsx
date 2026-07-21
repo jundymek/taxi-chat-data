@@ -27,7 +27,7 @@ export function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
         <span className="text-[12.5px] font-semibold text-ink">taxi-chat-data</span>
       </div>
       <div className="px-4 pb-1.5 pt-[14px] font-sans text-[10px] font-semibold tracking-[0.09em] text-faint">
-        SESJE
+        SESSIONS
       </div>
       {sessions.length ? (
         <ul className="flex list-none flex-col gap-px px-2 pb-2.5">
@@ -50,7 +50,7 @@ export function Sidebar({ sessions, activeId, onSelect }: SidebarProps) {
         </ul>
       ) : (
         <p className="m-0 px-4 pb-2.5 text-[11.5px] leading-[1.45] text-faint">
-          Zadane pytania pojawią się tutaj.
+          Questions you ask will appear here.
         </p>
       )}
     </aside>

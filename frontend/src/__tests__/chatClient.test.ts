@@ -22,8 +22,8 @@ describe("streamChat", () => {
     expect(out).toBe("ó");
   });
 
-  it("throws a Polish error when the response is not ok", async () => {
+  it("throws an error when the response is not ok", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
-    await expect(streamChat("q").next()).rejects.toThrow(/Serwer odpowiedział błędem \(500\)/);
+    await expect(streamChat("q").next()).rejects.toThrow(/The server returned an error \(500\)/);
   });
 });
