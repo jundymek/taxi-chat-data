@@ -8,20 +8,28 @@ Design document: [docs/DESIGN.md](docs/DESIGN.md) · Phase plans: [docs/superpow
 
 ## Architecture
 
+Node labels are the actual files, so the diagram doubles as a map of the repo.
+
 ```mermaid
 flowchart LR
-  P[Parquet<br/>NYC TLC] --> G[GCS raw]
-  G --> BQR[(BigQuery<br/>raw)]
-  PS[Pub/Sub<br/>trips-stream] --> BQS[(BigQuery<br/>stream.trips)]
-  BQR --> DBT[dbt<br/>staging → marts]
-  BQS --> DBT
-  DBT --> DW[(Star schema<br/>partitioned + clustered)]
-  DW --> GEN[genai<br/>RAG + NL2SQL + guardrails]
-  OLL[Ollama<br/>host] --> GEN
-  GEN --> API[FastAPI<br/>SSE /chat]
-  API --> FE[Frontend]
-  AF[Airflow] -.orchestrates.-> DBT
+  P[Parquet NYC TLC<br/>download.py] --> G[GCS raw layer<br/>batch_load.py]
+  G --> BQR[(raw.trips)]
+  P --> PROD[stream_producer.py] --> PS[Pub/Sub<br/>trips-stream] --> CONS[stream_consumer.py]
+  CONS --> BQS[(stream.trips)]
+  BQR --> STG[stg_trips.sql<br/>clean + dedup]
+  BQS --> STG
+  STG --> DW[(fct_trips.sql + dim_*.sql<br/>partitioned + clustered)]
+  DW -.schema YAML.-> IDX[indexer.py] --> CHR[(Chroma<br/>data/chroma)]
+  CHR --> RET[retriever.py]
+  RET --> PIPE[pipeline.py<br/>nl2sql + guardrails + retry]
+  DW --> PIPE
+  OLL[Ollama<br/>host] --> PIPE
+  PIPE --> API[main.py<br/>SSE /chat]
+  API --> FE[chatClient.ts<br/>+ StageTimeline.tsx]
+  AF[dbt_transform_dag.py] -.orchestrates.-> STG
 ```
+
+Step-by-step walkthrough of the same path: [Data path](#data-path).
 
 ## Quickstart
 
@@ -104,7 +112,45 @@ Regenerate with `python -m genai.eval`; the API also serves the latest report at
 - **Cost control:** [genai/guardrails.py](genai/guardrails.py) validates generated
   SQL and runs a BigQuery dry-run to reject queries that would scan too much data.
 
+## Data path
+
+One trip, from the TLC Parquet file to a sentence in the chat. Follow the links
+in order to read the system end to end.
+
+1. [ingestion/download.py](ingestion/download.py) — fetch the month's Parquet from NYC TLC (atomic `.part` write)
+2. [ingestion/batch_load.py](ingestion/batch_load.py) — Parquet → GCS raw layer → `raw.trips`
+3. [ingestion/stream_producer.py](ingestion/stream_producer.py) → [stream_consumer.py](ingestion/stream_consumer.py) — the same rows replayed through Pub/Sub into `stream.trips`, with deliberate duplicates. Their shared contract (message fields, `trip_key` recipe) lives in [stream_common.py](ingestion/stream_common.py)
+4. [dbt/models/staging/stg_trips.sql](dbt/models/staging/stg_trips.sql) — **both paths merge here**: clean, type, and dedup to one row per `trip_key`
+5. [dbt/models/marts/](dbt/models/marts/) — star schema: `fct_trips` (partitioned by date, clustered by pickup) plus four dimensions
+6. [analysis/measure_partitioning.py](analysis/measure_partitioning.py) — dry-run proof that the partitioning pays off
+7. [genai/indexer.py](genai/indexer.py) — dbt schema YAML → embeddings in Chroma (run manually after schema changes)
+8. [genai/retriever.py](genai/retriever.py) — question → the table docs and few-shots that match it
+9. [genai/nl2sql.py](genai/nl2sql.py) — prompt assembly and SQL extraction
+10. [genai/guardrails.py](genai/guardrails.py) — five gates before any SQL touches data: parse, single statement, SELECT-only, dataset allowlist, dry-run budget
+11. [genai/pipeline.py](genai/pipeline.py) — the LangGraph graph wiring 8–10 together, with a `validate → generate_sql` retry edge
+12. [api/main.py](api/main.py) — streams one SSE frame per graph node; contract in [api/schemas.py](api/schemas.py)
+13. [frontend/src/api/chatClient.ts](frontend/src/api/chatClient.ts) — consumes the stream and renders progress
+
+Orchestration runs alongside rather than inside this path:
+[dags/dbt_transform_dag.py](dags/dbt_transform_dag.py) triggers steps 4–5.
+
+A file-by-file walkthrough of the same path, with the non-obvious decisions
+explained, is in [docs/learn/00-sciezka-rekordu.md](docs/learn/00-sciezka-rekordu.md) (Polish).
+
+### Layer naming
+
+The warehouse uses dbt's own vocabulary (`staging`, `marts`) rather than the
+lakehouse medallion terms, since this is a dbt project. The layers map like this:
+
+| Medallion | This project |
+|---|---|
+| Bronze | `raw.trips` + `stream.trips` — untransformed, as ingested |
+| Silver | `staging.stg_trips` — cleaned, typed, deduplicated |
+| Gold | `marts.*` — star schema, partitioned and clustered |
+
 ## Repository layout
+
+Where things live (the section above covers what runs in what order).
 
 | Path | Contents |
 |---|---|

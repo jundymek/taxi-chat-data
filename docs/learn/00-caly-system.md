@@ -7,6 +7,11 @@ sekcja zakłada poprzednią.
 **Do czego służy:** żebyś potrafił opowiedzieć o tym projekcie na rozmowie
 kwalifikacyjnej i obronić każdą decyzję, którą podjęliśmy.
 
+**Szukasz konkretnych plików?** Ten dokument tłumaczy **dlaczego** — pojęcia i
+decyzje. Jeśli chcesz przejść przez projekt **plik po pliku**, w kolejności, w
+jakiej płyną dane, zajrzyj do [00-sciezka-rekordu.md](00-sciezka-rekordu.md).
+Oba dokumenty się uzupełniają.
+
 ---
 
 ## 1. Co to w ogóle jest
@@ -425,3 +430,7 @@ Odpowiedz sobie bez zaglądania:
 
 Jeśli na którekolwiek nie umiesz odpowiedzieć — to jest miejsce, do którego warto
 wrócić w tym dokumencie.
+
+A jeśli umiesz odpowiedzieć *co* się dzieje, ale nie wiesz, *w którym pliku* —
+to jest sygnał, żeby przejść [00-sciezka-rekordu.md](00-sciezka-rekordu.md) z
+otwartym projektem obok.
