@@ -38,7 +38,7 @@ models:
         description: "True for Saturday/Sunday."
 
   - name: fct_trips
-    description: "Trip fact table at one-row-per-trip grain. Partitioned by pickup_date and clustered by pickup_location_id for scan efficiency. Measures: fare, tip, tolls, total, distance, duration, passenger count."
+    description: "Trip fact table at one-row-per-trip grain. Partitioned by pickup_date and clustered by pickup_location_id for scan efficiency. Measures use their full column names: fare_amount, tip_amount, tolls_amount, total_amount, trip_distance, trip_duration_min, passenger_count."
     columns:
       - name: trip_key
         description: "Deterministic surrogate key from staging (primary key)."
@@ -64,3 +64,27 @@ models:
               field: payment_type
       - name: ratecode_id
         description: "Joins dim_ratecode.ratecode_id."
+      # Measures and remaining keys carry no dbt tests, but they are what users
+      # actually ask about. They are documented here because this file is the
+      # schema context the RAG retriever feeds to the NL2SQL model — an
+      # undocumented column is one the model has to guess the name of.
+      - name: dropoff_location_id
+        description: "Drop-off zone; joins dim_location.location_id."
+      - name: pickup_datetime
+        description: "Trip start timestamp."
+      - name: dropoff_datetime
+        description: "Trip end timestamp."
+      - name: trip_duration_min
+        description: "Trip duration in minutes."
+      - name: passenger_count
+        description: "Number of passengers."
+      - name: trip_distance
+        description: "Trip distance in miles."
+      - name: fare_amount
+        description: "Base fare in USD, excluding tip, tolls and surcharges."
+      - name: tip_amount
+        description: "Tip in USD. Card payments only — cash tips are not recorded."
+      - name: tolls_amount
+        description: "Tolls in USD."
+      - name: total_amount
+        description: "Total charged in USD, including fare, tip, tolls and surcharges."
