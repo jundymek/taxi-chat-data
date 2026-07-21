@@ -88,7 +88,18 @@ sprawdzała już niczego. **Wniosek:** „testy przechodzą" ≠ „testy nadal 
 to, co myślisz". Po zmianie stringów warto sprawdzić, czy asercje faktycznie
 dotykają zmienionego kodu.
 
-### 6. Czego celowo NIE ruszyłem
+### 6. `<html lang>` — złapane dopiero na żywej stronie
+
+Testy jednostkowe renderują komponenty, nie `index.html`, więc nikt nie zauważył,
+że dokument nadal deklarował `lang="pl"` przy w pełni angielskim interfejsie.
+Wyszło dopiero przy oglądaniu prawdziwej strony przez Playwright.
+
+To realny błąd dostępności: czytnik ekranu przeczytałby angielski tekst z polską
+wymową. **Wniosek:** zmiany językowe warto sprawdzić na uruchomionej aplikacji,
+bo część rzeczy (atrybuty `<html>`, `<title>`, layout przy dłuższych napisach)
+leży poza zasięgiem testów komponentów.
+
+### 7. Czego celowo NIE ruszyłem
 
 W `frontend/src/__tests__/chatClient.test.ts` został polski znak `"ó"`:
 
