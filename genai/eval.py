@@ -194,9 +194,9 @@ def run_eval(models: list[str] | None = None) -> EvalReport:
 
 def render_markdown(report: EvalReport) -> str:
     lines = [
-        f"# Ewaluacja NL2SQL — {report.question_count} pytań",
+        f"# NL2SQL evaluation — {report.question_count} questions",
         "",
-        "| Model | Trafność | Wykonane | Śr. próby | Odmowy |",
+        "| Model | Accuracy | Executed | Avg. attempts | Refusals |",
         "|---|---|---|---|---|",
     ]
     for m in report.models:

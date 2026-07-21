@@ -13,14 +13,13 @@ from genai import config, guardrails, nl2sql
 from genai.types import SchemaContext, ValidationResult
 
 SUMMARY_SYSTEM = (
-    "You are a helpful data analyst. Answer in POLISH, briefly and concretely, "
-    "based ONLY on the provided query result rows."
+    "You are a helpful data analyst. Answer briefly and concretely, based ONLY "
+    "on the provided query result rows. Reply in the SAME LANGUAGE as the "
+    "user's question — if they ask in Polish, answer in Polish; if they ask in "
+    "English, answer in English."
 )
 
-REFUSAL_TEMPLATE = (
-    "Nie umiem bezpiecznie odpowiedzieć na to pytanie. "
-    "Ostatni powód odrzucenia: {reason}"
-)
+REFUSAL_TEMPLATE = "I can't answer that question safely. Last rejection reason: {reason}"
 
 
 class AskState(TypedDict, total=False):
@@ -89,15 +88,15 @@ def build_pipeline(llm=None, retriever=None, validate_fn=None, bq_client=None):
 
     def summarize(state: AskState) -> AskState:
         prompt = (
-            f"Question (Polish): {state['question']}\n"
+            f"Question: {state['question']}\n"
             f"SQL used: {state['sql']}\n"
             f"Result rows (max 20 shown): {state['rows'][:20]}\n"
-            "Answer the question in Polish."
+            "Answer the question in the same language it was asked in."
         )
         return {"answer": llm.generate(prompt, system=SUMMARY_SYSTEM)}
 
     def refuse(state: AskState) -> AskState:
-        reason = state["validation"].reason or "nieznany"
+        reason = state["validation"].reason or "unknown"
         return {"refused": True, "answer": REFUSAL_TEMPLATE.format(reason=reason)}
 
     graph = StateGraph(AskState)

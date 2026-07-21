@@ -40,13 +40,13 @@ export function useChatStream(): ChatStream {
         if (!isCurrent()) return;
         for (const frame of parse(chunk)) {
           if (frame.stage === "done") setResult(frame.result ?? null);
-          else if (frame.stage === "error") setError(frame.message ?? "Nieznany błąd");
+          else if (frame.stage === "error") setError(frame.message ?? "Unknown error");
           else setFrames((prev) => [...prev, frame]);
         }
       }
     } catch (exc) {
       if (isCurrent()) {
-        setError(exc instanceof Error ? exc.message : "Błąd połączenia.");
+        setError(exc instanceof Error ? exc.message : "Connection error.");
       }
     } finally {
       if (isCurrent()) setRunning(false);

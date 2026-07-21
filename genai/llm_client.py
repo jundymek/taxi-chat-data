@@ -5,8 +5,8 @@ from genai import config
 from genai.types import LLMError
 
 _CONNECTION_HINT = (
-    "Nie mogę połączyć się z Ollamą pod {url}. "
-    "Uruchom `ollama serve` i sprawdź, że model jest zainstalowany (`ollama list`)."
+    "Cannot connect to Ollama at {url}. "
+    "Run `ollama serve` and check that the model is installed (`ollama list`)."
 )
 
 

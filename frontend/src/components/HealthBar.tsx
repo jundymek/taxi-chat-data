@@ -7,7 +7,7 @@ interface HealthBarProps {
 const LABEL: Record<string, string> = {
   ollama: "Ollama",
   bigquery: "BigQuery",
-  chroma_index: "Indeks",
+  chroma_index: "Index",
 };
 
 /** Names of the dependencies that are not "ok", in stable payload order. */
@@ -20,8 +20,8 @@ export function downServices(health: Health): string[] {
 /** Pill copy for a ready payload: all-clear, or which dependencies are down. */
 export function healthSummary(health: Health): string {
   const down = downServices(health);
-  if (!down.length) return "wszystkie usługi OK";
-  return `${down.join(", ")} — brak połączenia`;
+  if (!down.length) return "all services OK";
+  return `${down.join(", ")} — unreachable`;
 }
 
 /**
@@ -39,7 +39,7 @@ export function HealthBar({ state }: HealthBarProps) {
     return (
       <span className={`${base} border-hair bg-subtle text-faint`}>
         <span className="h-1.5 w-1.5 rounded-full bg-faint" />
-        sprawdzam status…
+        checking status…
       </span>
     );
   }
@@ -47,7 +47,7 @@ export function HealthBar({ state }: HealthBarProps) {
     return (
       <span className={`${base} border-warn-line bg-warn-bg text-warn`}>
         <span className="h-1.5 w-1.5 rounded-full bg-warn-dot" />
-        status niedostępny
+        status unavailable
       </span>
     );
   }

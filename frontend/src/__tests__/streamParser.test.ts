@@ -18,11 +18,11 @@ describe("createFrameParser", () => {
   it("returns multiple frames from one chunk, in order", () => {
     const parse = createFrameParser();
     const frames = parse(
-      EV('{"stage":"validate","ok":false,"reason":"Tylko SELECT."}') +
+      EV('{"stage":"validate","ok":false,"reason":"SELECT only."}') +
         EV('{"stage":"generate_sql","attempt":2}'),
     );
     expect(frames.map((f) => f.stage)).toEqual(["validate", "generate_sql"]);
-    expect(frames[0].reason).toBe("Tylko SELECT.");
+    expect(frames[0].reason).toBe("SELECT only.");
   });
 
   it("ignores keep-alive/comment lines without data", () => {

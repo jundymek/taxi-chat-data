@@ -23,8 +23,8 @@ def _seed_chroma(chroma_dir: Path, embedder: FakeEmbedder):
         embeddings=embedder.embed(schema_texts),
     )
     example_texts = [
-        "QUESTION: Ile było trip?\nSQL: SELECT 1",
-        "QUESTION: platnosci?\nSQL: SELECT 2",
+        "QUESTION: How many trips?\nSQL: SELECT 1",
+        "QUESTION: payments?\nSQL: SELECT 2",
     ]
     client.create_collection(EXAMPLES_COLLECTION).add(
         ids=["example-1", "example-2"],
@@ -37,16 +37,16 @@ def test_retrieve_returns_most_similar_docs_first(tmp_path: Path):
     embedder = FakeEmbedder()
     _seed_chroma(tmp_path, embedder)
     retriever = Retriever(chroma_dir=tmp_path, embedder=embedder)
-    ctx = retriever.retrieve("ile bylo trip?", k_schema=1, k_examples=1)
+    ctx = retriever.retrieve("how many trips?", k_schema=1, k_examples=1)
     assert isinstance(ctx, SchemaContext)
     assert ctx.tables == ["Table marts.fct_trips: trips fact"]
-    assert ctx.examples == ["QUESTION: Ile było trip?\nSQL: SELECT 1"]
+    assert ctx.examples == ["QUESTION: How many trips?\nSQL: SELECT 1"]
 
 
 def test_retrieve_caps_k_at_collection_size(tmp_path: Path):
     embedder = FakeEmbedder()
     _seed_chroma(tmp_path, embedder)
     retriever = Retriever(chroma_dir=tmp_path, embedder=embedder)
-    ctx = retriever.retrieve("cokolwiek", k_schema=10, k_examples=10)
+    ctx = retriever.retrieve("anything", k_schema=10, k_examples=10)
     assert len(ctx.tables) == 2
     assert len(ctx.examples) == 2

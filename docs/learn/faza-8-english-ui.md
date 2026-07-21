@@ -1,0 +1,108 @@
+# Faza 8 — przejście na angielski UI (projekt portfolio)
+
+## Po co
+
+Projekt ma być wizytówką w portfolio, więc interfejs i komunikaty widoczne dla
+użytkownika muszą być po angielsku. Notatki w `docs/learn/` **zostają po polsku** —
+to materiał do nauki, nie część produktu.
+
+## Czego się nauczyłem
+
+### 1. „Przetłumaczenie UI" to nie tylko pliki `.tsx`
+
+Pierwszy grep po `frontend/src` wyglądał na pełny obraz. Nie był. Polskie stringi
+widoczne dla użytkownika siedziały w czterech warstwach:
+
+| Warstwa | Przykład | Gdzie widać |
+|---|---|---|
+| Komponenty React | `"Zapytaj"`, `"SESJE"` | wprost w UI |
+| Komunikaty guardrails (Python) | `"Dozwolone są wyłącznie zapytania SELECT"` | w karcie wyniku po odrzuceniu |
+| Prompty do LLM-a | `"Answer in POLISH"` | w prozie odpowiedzi |
+| Przykłady few-shot (RAG) | `"Ile było wszystkich przejazdów?"` | pośrednio — przez jakość SQL |
+
+Gdybym przetłumaczył tylko pierwszą warstwę, aplikacja odpowiadałaby po polsku
+na angielskie pytania — gorzej niż spójnie polski interfejs.
+
+### 2. Sprzężenie stringów między frontendem a backendem
+
+`StageTimeline.tsx` miał funkcję `cleanReason()`, która obcinała szum z komunikatu
+BigQuery, dopasowując **dosłowny polski prefiks**:
+
+```ts
+const WRAPPER = "BigQuery odrzucił zapytanie:";   // <- musi się zgadzać z guardrails.py
+if (!reason.startsWith(WRAPPER)) return reason;
+```
+
+Ten sam napis powstaje w `genai/guardrails.py`. Zmiana tylko po jednej stronie
+nie wywala testów ani typów — funkcja po cichu przestaje czyścić komunikat i
+użytkownik dostaje na ekranie surowy URL z Job ID. **Wniosek:** string dzielony
+przez dwie usługi to ukryty kontrakt. Jeśli zostaje, zasługuje na komentarz
+wskazujący drugą stronę.
+
+### 3. Wymuszanie języka odpowiedzi vs dopasowanie do pytania
+
+Pierwotnie pipeline miał zakodowane na sztywno:
+
+```python
+SUMMARY_SYSTEM = "... Answer in POLISH ..."
+prompt = f"Question (Polish): {question}\n... Answer the question in Polish."
+```
+
+Zamiast przestawić to na „zawsze angielski", lepsze jest **dopasowanie do języka
+pytania** — działa dla obu przypadków i nie wymusza sztucznego ograniczenia:
+
+```python
+SUMMARY_SYSTEM = (
+    "... Reply in the SAME LANGUAGE as the user's question — if they ask in "
+    "Polish, answer in Polish; if they ask in English, answer in English."
+)
+```
+
+Ważne: sam system prompt **nie wystarczył**. Prompt użytkownika miał twarde
+`"Question (Polish)"` i `"Answer the question in Polish."`, co nadpisywało
+instrukcję systemową. Trzeba było zmienić oba miejsca.
+
+Zastrzeżenie: to instrukcja dla modelu, nie deterministyczny przełącznik.
+Mniejsze modele (`llama3.1`, `gemma`) potrafią zdryfować do angielskiego mimo
+polskiego pytania.
+
+### 4. Przykłady few-shot to nie są zwykłe dane
+
+`genai/examples.yml` trafia do Chromy i jest dopasowywany **wektorowo** do pytania
+użytkownika. Polskie przykłady + angielskie pytanie = słabe podobieństwo
+semantyczne → retriever podsuwa gorsze przykłady → gorszy wygenerowany SQL.
+Tłumaczenie ich nie było kosmetyką, tylko warunkiem działania RAG-u po angielsku.
+
+### 5. Zielone testy potrafią być mylące
+
+Po zmianie komunikatów guardrails backend dalej pokazywał 105/105. Powód: testy
+asertowały na danych testowych, nie na komunikatach. Ale jeden test kryl martwą
+asercję:
+
+```python
+assert "poprzednia próba" in prompt.lower() or "previous attempt" in prompt.lower()
+```
+
+Przechodził wyłącznie dzięki drugiemu członowi `or` — polska połowa nie
+sprawdzała już niczego. **Wniosek:** „testy przechodzą" ≠ „testy nadal testują
+to, co myślisz". Po zmianie stringów warto sprawdzić, czy asercje faktycznie
+dotykają zmienionego kodu.
+
+### 6. Czego celowo NIE ruszyłem
+
+W `frontend/src/__tests__/chatClient.test.ts` został polski znak `"ó"`:
+
+```ts
+// "ó" = 0xC3 0xB3, dostarczane po jednym bajcie na odczyt (i flush na EOF).
+expect(out).toBe("ó");
+```
+
+To test dekodowania wielobajtowego UTF-8 na granicy chunków SSE. Podmiana na
+ASCII wyłączyłaby go po cichu — asercja dalej by przechodziła, ale nie
+sprawdzałaby już niczego istotnego. Znak nie-ASCII **jest** tu przedmiotem testu.
+
+## Efekt
+
+- `pytest`: 105 passed
+- `vitest`: 46 passed (9 plików)
+- `ruff` i `tsc --noEmit`: czysto

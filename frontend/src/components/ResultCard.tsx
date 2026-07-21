@@ -8,18 +8,18 @@ interface ResultCardProps {
 const TECH_COL = /^f\d+_$/; // BigQuery auto-name for an unaliased SELECT expr.
 
 /** Human label for a table column. Technical BigQuery names (f0_, f1_, …)
- *  become "Wynik" (single) or "Wynik N" (several); other names pass through. */
+ *  become "Result" (single) or "Result N" (several); other names pass through. */
 export function columnLabel(key: string, allKeys: string[]): string {
   if (!TECH_COL.test(key)) return key;
   const tech = allKeys.filter((k) => TECH_COL.test(k));
-  if (tech.length <= 1) return "Wynik";
-  return `Wynik ${tech.indexOf(key) + 1}`;
+  if (tech.length <= 1) return "Result";
+  return `Result ${tech.indexOf(key) + 1}`;
 }
 
 /** Captioned scan size in GB, 2 decimals; tiny scans as "<0.01 GB". */
 export function formatScan(gb: number): string {
   const size = gb < 0.01 ? "<0.01 GB" : `${gb.toFixed(2)} GB`;
-  return `Przeskanowano ${size}`;
+  return `Scanned ${size}`;
 }
 
 /**
@@ -71,7 +71,7 @@ function CopySql({ sql }: { sql: string }) {
         );
       }}
     >
-      {copied ? "Skopiowano" : "Kopiuj"}
+      {copied ? "Copied" : "Copy"}
     </button>
   );
 }
@@ -96,7 +96,7 @@ export function ResultCard({ result }: ResultCardProps) {
         ) : null}
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           <span className="rounded-[5px] border border-hair px-2 py-0.5 font-mono text-[10.5px] font-medium text-muted">
-            {result.attempts} {result.attempts === 1 ? "próba" : "próby"}
+            {result.attempts} {result.attempts === 1 ? "attempt" : "attempts"}
           </span>
           <span className="rounded-[5px] border border-hair px-2 py-0.5 font-mono text-[10.5px] font-medium text-muted">
             {formatScan(result.scanned_gb)}
@@ -110,7 +110,7 @@ export function ResultCard({ result }: ResultCardProps) {
         <>
           <div className="flex items-center border-y border-hair bg-subtle px-4 py-1.5">
             <span className="font-mono text-[10px] font-semibold tracking-[0.09em] text-faint">
-              WYGENEROWANY SQL · SPRAWDZONY DRY-RUNEM
+              GENERATED SQL · DRY-RUN VERIFIED
             </span>
             <CopySql sql={result.sql} />
           </div>
@@ -173,8 +173,8 @@ export function ResultCard({ result }: ResultCardProps) {
           </div>
           <div className="border-t border-hair-soft px-4 py-[7px] text-[11px] text-faint">
             {result.rows.length > 50
-              ? `${visible.length} z ${result.rows.length} wierszy`
-              : `${result.rows.length} ${result.rows.length === 1 ? "wiersz" : "wierszy"} · pełny wynik`}
+              ? `${visible.length} of ${result.rows.length} rows`
+              : `${result.rows.length} ${result.rows.length === 1 ? "row" : "rows"} · full result`}
           </div>
         </div>
       ) : null}

@@ -26,7 +26,7 @@ describe("useChatStream", () => {
           EV('{"stage":"execute"}'),
           EV('{"stage":"summarize"}'),
           EV(
-            '{"stage":"done","result":{"answer":"Pięć.","sql":"SELECT 1","rows":[],' +
+            '{"stage":"done","result":{"answer":"Five.","sql":"SELECT 1","rows":[],' +
               '"scanned_gb":0.01,"attempts":1,"refused":false,"model":"gemma4"}}',
           ),
         ),
@@ -34,9 +34,9 @@ describe("useChatStream", () => {
     );
     const { result } = renderHook(() => useChatStream());
     act(() => {
-      void result.current.ask("Ile kursów?");
+      void result.current.ask("How many trips?");
     });
-    await waitFor(() => expect(result.current.result?.answer).toBe("Pięć."));
+    await waitFor(() => expect(result.current.result?.answer).toBe("Five."));
     expect(result.current.frames.map((f) => f.stage)).toEqual([
       "retrieve",
       "generate_sql",
@@ -54,15 +54,15 @@ describe("useChatStream", () => {
       vi.fn().mockResolvedValue(
         sseResponse(
           EV('{"stage":"retrieve"}'),
-          EV('{"stage":"error","message":"Ollama nie odpowiada"}'),
+          EV('{"stage":"error","message":"Ollama is not responding"}'),
         ),
       ),
     );
     const { result } = renderHook(() => useChatStream());
     act(() => {
-      void result.current.ask("Ile?");
+      void result.current.ask("How many?");
     });
-    await waitFor(() => expect(result.current.error).toBe("Ollama nie odpowiada"));
+    await waitFor(() => expect(result.current.error).toBe("Ollama is not responding"));
     expect(result.current.result).toBeNull();
   });
 
@@ -89,7 +89,7 @@ describe("useChatStream", () => {
         sseResponse(
           EV('{"stage":"validate","ok":true}'),
           EV(
-            '{"stage":"done","result":{"answer":"Drugie.","sql":"","rows":[],' +
+            '{"stage":"done","result":{"answer":"Second.","sql":"","rows":[],' +
               '"scanned_gb":0,"attempts":1,"refused":false,"model":"m"}}',
           ),
         ),
@@ -101,15 +101,15 @@ describe("useChatStream", () => {
 
     const { result } = renderHook(() => useChatStream());
     act(() => {
-      void result.current.ask("Pierwsze?");
+      void result.current.ask("First?");
     });
     await waitFor(() =>
       expect(result.current.frames.map((f) => f.stage)).toContain("retrieve"),
     );
     act(() => {
-      void result.current.ask("Drugie?");
+      void result.current.ask("Second?");
     });
-    await waitFor(() => expect(result.current.result?.answer).toBe("Drugie."));
+    await waitFor(() => expect(result.current.result?.answer).toBe("Second."));
     // The abandoned first stream must not leak its frame or clear `running`.
     expect(result.current.frames.map((f) => f.stage)).toEqual(["validate"]);
     expect(result.current.running).toBe(false);

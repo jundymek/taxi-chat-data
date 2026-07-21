@@ -17,7 +17,7 @@ _PROMPT_TEMPLATE = """Schema context:
 Similar solved examples:
 {examples}
 
-{feedback}Question (Polish): {question}
+{feedback}Question: {question}
 
 Reply with the SQL only."""
 
@@ -26,7 +26,7 @@ def build_prompt(question: str, context: SchemaContext, error_feedback: str | No
     feedback = ""
     if error_feedback:
         feedback = (
-            "IMPORTANT — previous attempt was rejected (poprzednia próba odrzucona): "
+            "IMPORTANT — the previous attempt was rejected: "
             f"{error_feedback}\nFix the SQL accordingly.\n\n"
         )
     return _PROMPT_TEMPLATE.format(
