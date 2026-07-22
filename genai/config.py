@@ -15,6 +15,19 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 GENERATION_MODEL = "gemma4:latest"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
 
+# NL2SQL wants the single most-likely SQL, not creative variety. Temperature 0
+# plus a fixed seed makes generation deterministic, which is what turns the eval
+# score into a metric someone else can reproduce instead of a per-run lottery.
+# Ollama's own defaults (temperature 0.8) would reintroduce that variance.
+GENERATION_TEMPERATURE = 0.0
+GENERATION_SEED = 42
+
+# Per-request Ollama timeout. A cold model (or the first request after Ollama
+# swaps a model into VRAM) can take well over a minute, and NL2SQL may retry up
+# to MAX_SQL_ATTEMPTS times — so the old 120s was tight enough to surface as a
+# connection error on a single slow question. Overridable for slower hosts.
+OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "300"))
+
 BQ_PROJECT = "taxi-chat-data"
 BQ_LOCATION = "US"
 ALLOWED_DATASETS = frozenset({"staging", "marts"})

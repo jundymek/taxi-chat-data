@@ -93,8 +93,17 @@ result-set equality. Numbers from [docs/eval/latest.md](docs/eval/latest.md):
 
 | Model | Accuracy | Executed | Avg attempts | Refusals |
 |---|---|---|---|---|
-| gemma4:latest | 67% | 94% | 1.44 | 1 |
-| llama3.1:8b | 61% | 78% | 1.50 | 4 |
+| gemma4:latest | 39% | 83% | 1.39 | 3 |
+| llama3.1:8b | 33% | 89% | 1.33 | 2 |
+
+Generation runs at temperature 0 with a fixed seed
+([genai/config.py](genai/config.py)), so these numbers are reproducible — an
+earlier build sampled at Ollama's default temperature 0.8 and scored anywhere
+from the high-30s to high-60s on the same code, which made the metric a lottery
+rather than a measurement. Two of the 18 questions are refusal tests
+(`raw.trips`, a `DELETE`): the local models tend to rewrite them into an allowed
+query that then executes, which the scorer counts as incorrect — a real,
+repeatable weakness rather than run-to-run noise.
 
 Regenerate with `python -m genai.eval`; the API also serves the latest report at
 `GET /eval`.

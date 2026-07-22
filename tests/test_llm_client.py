@@ -35,6 +35,21 @@ def test_generate_returns_response_text(monkeypatch):
     assert captured["json"]["system"] == "you are a sql bot"
 
 
+def test_generate_sends_deterministic_options(monkeypatch):
+    # Temperature 0 + fixed seed is what makes the eval reproducible; without
+    # it Ollama defaults to 0.8 and every run scores differently.
+    captured = {}
+
+    def fake_post(url, json=None, timeout=None):
+        captured["json"] = json
+        return FakeResponse({"response": "SELECT 1"})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    LLMClient().generate("write sql")
+    assert captured["json"]["options"]["temperature"] == 0.0
+    assert captured["json"]["options"]["seed"] == 42
+
+
 def test_generate_raises_llm_error_when_ollama_down(monkeypatch):
     def fake_post(url, json=None, timeout=None):
         raise requests.ConnectionError("refused")

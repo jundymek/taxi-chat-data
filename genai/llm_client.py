@@ -15,14 +15,24 @@ class LLMClient:
         self,
         model: str = config.GENERATION_MODEL,
         base_url: str = config.OLLAMA_BASE_URL,
-        timeout: int = 120,
+        timeout: int = config.OLLAMA_TIMEOUT,
     ):
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
     def generate(self, prompt: str, system: str | None = None) -> str:
-        payload = {"model": self.model, "prompt": prompt, "stream": False}
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            # Deterministic by default (see config): NL2SQL wants the most
+            # likely SQL, and a reproducible eval score, not sampling variety.
+            "options": {
+                "temperature": config.GENERATION_TEMPERATURE,
+                "seed": config.GENERATION_SEED,
+            },
+        }
         if system is not None:
             payload["system"] = system
         data = self._post("/api/generate", payload)

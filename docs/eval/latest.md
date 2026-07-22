@@ -1,6 +1,6 @@
-# Ewaluacja NL2SQL — 18 pytań
+# NL2SQL evaluation — 18 questions
 
-| Model | Trafność | Wykonane | Śr. próby | Odmowy |
+| Model | Accuracy | Executed | Avg. attempts | Refusals |
 |---|---|---|---|---|
-| gemma4:latest | 67% | 94% | 1.44 | 1 |
-| llama3.1:8b | 61% | 78% | 1.50 | 4 |
+| gemma4:latest | 39% | 83% | 1.39 | 3 |
+| llama3.1:8b | 33% | 89% | 1.33 | 2 |
